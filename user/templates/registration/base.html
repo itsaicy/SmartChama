@@ -1,0 +1,48 @@
+{% load static%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="{% static 'fontawesomefree/css/all.min.css' %}">  <!-- Font Awesome -->
+    <link rel="stylesheet" href="{% static 'css/styles.css'%}"> <!--CSS-->
+</head>
+<body>
+<div class="wrapper">
+    <nav class="nav">
+        <div class="nav-logo">
+            <p>SmartChama</p>
+        </div>
+        <div class="nav-menu">
+            <ul>
+                <li><a href="#" class="link active">Home</a></li>
+                <li><a href="#" class="link">About</a></li>
+                <li><a href="#" class="link">Contact Us</a></li>
+            </ul>
+        </div>
+        <div class="nav-button">
+            <button class="btn white-btn" id="loginBtn"><a href="{% url 'login' %}"></a>Login</button>
+            <button class="btn" id="signupBtn"><a href="{% url 'signup' %}"></a>SignUp</button>
+        </div>
+        <div class="nav-menu-btn">
+            <i class="fa-solid fa-bars"></i>
+        </div>
+    </nav>
+</div>
+<!--Unique content goes here-->
+<main>
+    {% block content %} 
+    {% endblock content %}
+</main>
+
+<script>
+document.getElementById('loginBtn').onclick = function() {
+    window.location.href = "{% url 'login' %}";
+};
+document.getElementById('signupBtn').onclick = function() {
+    window.location.href = "{% url 'signup' %}";
+};
+</script>
+</body>
+</html>
