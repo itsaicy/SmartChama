@@ -32,7 +32,7 @@ class User(AbstractUser):
     User_date_joined = models.DateTimeField(auto_now_add=True)
 
     
-    USERNAME_FIELD = "username"  # users log in with email
+    USERNAME_FIELD = "User_username"  
     REQUIRED_FIELDS = ["User_first_name",
                        "User_last_name",
                        "User_national_id",
