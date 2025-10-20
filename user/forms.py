@@ -5,12 +5,12 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class RegistrationForm(forms.ModelForm):
-    User_password = forms.CharField(widget=forms.PasswordInput(attrs={
+    password = forms.CharField(widget=forms.PasswordInput(attrs={
         'placeholder': 'Password',
         'class': 'form-control'
     }))
 
-    User_confirm_password = forms.CharField(widget=forms.PasswordInput(attrs={
+    confirm_password = forms.CharField(widget=forms.PasswordInput(attrs={
         'placeholder': 'Confirm Password',
         'class': 'form-control'
     }))
@@ -40,7 +40,7 @@ class RegistrationForm(forms.ModelForm):
                 'placeholder': 'Phone Number',
                 'class': 'form-control'
             }),
-            'User_national_id': forms.NumberInput(attrs={
+            'User_national_id': forms.TextInput(attrs={
                 'placeholder': 'National ID',
                 'class': 'form-control'
             }),
@@ -48,11 +48,12 @@ class RegistrationForm(forms.ModelForm):
         }
 
         
-        def clean(self):
-            cleaned_data = super().clean()
-            User_password = cleaned_data.get("User_password")
-            User_confirm_password = cleaned_data.get("User_confirm_password")
-            if User_password and User_confirm_password and User_password != User_confirm_password:
-                raise forms.ValidationError("Passwords do not match.")
-            return cleaned_data
+    def clean(self):
+        cleaned_data = super().clean()
+        User_password = cleaned_data.get("User_password")
+        User_confirm_password = cleaned_data.get("User_confirm_password")
+
+        if User_password and User_confirm_password and User_password != User_confirm_password:
+            raise forms.ValidationError("Passwords do not match.")
+        return cleaned_data
         
