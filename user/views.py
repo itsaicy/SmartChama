@@ -16,7 +16,7 @@ def signup_view(request):
         form = RegistrationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save(commit=False)
-            user.set_password(form.cleaned_data["User_password"])
+            user.set_password(form.cleaned_data["password"])
             user.save()
             messages.success(request, "Account created successfully! Please log in.")
             return redirect("login")
