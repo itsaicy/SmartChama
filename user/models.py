@@ -1,10 +1,32 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
+from django.contrib.auth.models import BaseUserManager
+
+class CustomUserManager(BaseUserManager):
+    def create_user(self, User_email, password=None, **extra_fields):
+        if not User_email:
+            raise ValueError("The Email field must be set")
+        email = self.normalize_email(User_email)
+        user = self.model(User_email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, User_email, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+
+        return self.create_user(User_email, password, **extra_fields)
 
 # Create your models here.
 class User(AbstractUser):
-    User_username = models.CharField(max_length=30, unique=True)
+    username = None  # ⬅️ This disables Django's default username field
     User_phone_regex = RegexValidator(
         regex = r'^\+\d{1,3}\d{9}$',
         message = "Phone number must start with '+' followed by country code and 9 digits."
@@ -30,9 +52,9 @@ class User(AbstractUser):
         default='active'
     )
     User_date_joined = models.DateTimeField(auto_now_add=True)
-
+    objects = CustomUserManager()
     
-    USERNAME_FIELD = "User_username"  
+    USERNAME_FIELD = "User_email"  
     REQUIRED_FIELDS = ["User_first_name",
                        "User_last_name",
                        "User_national_id",

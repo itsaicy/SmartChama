@@ -26,10 +26,6 @@
             <form method="post" action="{% url 'signup' %}"> 
                 {% csrf_token %} 
                 <div class="two-forms"> 
-                    <div class="input-box"> 
-                        <i class="fa-solid fa-user"></i> 
-                        {{ form.User_username }} 
-                    </div>
                     <div class="input-box">
                          <i class="fa-solid fa-user"></i> 
                          {{ form.User_first_name }} 
