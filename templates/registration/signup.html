@@ -1,0 +1,65 @@
+{% extends "registration/base.html" %}
+{% block content %}
+    <!-- Django Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-danger">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+<!-- Form Error Display -->
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    {% endif %}
+<main>
+    <div class="signup-container"id="signup">
+         <div class="top"> 
+            <span>Have an account?<a href="{% url 'login' %}" onclick="login()">Login</a></span>
+            <header>SignUp</header> 
+        </div> 
+            <form method="post" action="{% url 'signup' %}"> 
+                {% csrf_token %} 
+                <div class="two-forms"> 
+                    <div class="input-box">
+                         <i class="fa-solid fa-user"></i> 
+                         {{ form.user_first_name }} 
+                    </div> 
+                    <div class="input-box"> 
+                        <i class="fa-solid fa-user-tag"></i> 
+                        {{ form.user_last_name }}
+                    </div> 
+                    <div class="input-box"> 
+                        <i class="fa-solid fa-envelope"></i> 
+                        {{ form.user_email }} 
+                    </div>
+                    <div class="input-box"> 
+                        <i class="fa-solid fa-phone"></i> 
+                        {{ form.user_phone_number }} 
+                    </div> 
+                    <div class="input-box"> 
+                        <i class="fa-solid fa-id-card"></i> 
+                        {{ form.user_national_id }} 
+                    </div>
+                    <div class="input-box"> 
+                        <i class="fa-solid fa-lock"></i> 
+                        {{ form.password }} 
+                    </div> 
+                    <div class="input-box"> 
+                        <i class="fa-solid fa-lock"></i> 
+                        {{ form.confirm_password }} 
+                    </div> 
+                    <div class="input-box"> 
+                        <input type="submit" class="submit" value="SignUp"> 
+                    </div>
+                </div> 
+            </form>
+    </div>
+
+</main>
+{% endblock content %}
