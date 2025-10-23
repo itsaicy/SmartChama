@@ -12,7 +12,7 @@ def home(request):
     return render(request, "registration/home.html")
 
 
-# Sign Up View
+# SignUp View
 def signup_view(request):
     if request.method == "POST":
         form = RegistrationForm(request.POST, request.FILES)
@@ -30,13 +30,13 @@ def signup_view(request):
     return render(request, "registration/signup.html", {"form": form})
 
 
-# Login View (now uses email instead of username)
+# Login View 
 def login_view(request):
     if request.method == "POST":
-        email = request.POST.get('email')  # changed from 'username' → 'email'
+        email = request.POST.get('email')  
         password = request.POST.get('password')
 
-        user = authenticate(request, email=email, password=password)  # updated
+        user = authenticate(request, email=email, password=password)  
 
         if user is not None:
             login(request, user)
