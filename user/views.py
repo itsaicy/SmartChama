@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from chama.utils import get_user_dashboard_redirect
 from user.forms import RegistrationForm
 from user.models import User
 
@@ -29,24 +30,26 @@ def signup_view(request):
     
     return render(request, "registration/signup.html", {"form": form})
 
-
 # Login View 
 def login_view(request):
     if request.method == "POST":
         email = request.POST.get('email')  
         password = request.POST.get('password')
 
-        user = authenticate(request, email=email, password=password)  
+        user = authenticate(request, username=email, password=password)  
 
         if user is not None:
             login(request, user)
             messages.success(request, "Login successful.")
-            return redirect("home")
+
+            from chama.utils import get_user_dashboard_redirect
+            dashboard_url = get_user_dashboard_redirect(user)
+            return redirect(dashboard_url)
+
         else:
             messages.error(request, "Invalid email or password.")
 
     return render(request, "registration/login.html")
-
 
 # Logout View
 def logout_view(request):
