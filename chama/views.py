@@ -10,7 +10,7 @@ from chama.utils import is_chama_admin, is_chama_secretary, is_admin_or_secretar
 
 # View 1: List All Chamas
 
-@login_required
+@login_required(login_url="login")
 def chama_list(request):
     """Show all available chamas."""
     chamas = Chama.objects.all().order_by('-chama_created_at')
@@ -18,7 +18,7 @@ def chama_list(request):
 
 # View 2: Create a New Chama
 
-@login_required
+@login_required(login_url="login")
 def create_chama(request):
     """Allow any logged-in user to create a chama."""
     if request.method == 'POST':
@@ -39,11 +39,11 @@ def create_chama(request):
     else:
         form = ChamaForm()
 
-    return render(request, 'chama/chama_form.html', {'form': form})
+    return render(request, 'chama/create_chama.html', {'form': form})
 
 # View 3: Chama Detail
 
-@login_required
+@login_required(login_url='login')
 def chama_detail(request, pk):
     """Show chama details, members, and join requests (for admins/secretaries)."""
     chama = get_object_or_404(Chama, pk=pk)
@@ -76,7 +76,7 @@ def chama_detail(request, pk):
 
 # View 4: Edit Chama (Admin/Secretary Only)
 
-@login_required
+@login_required(login_url='login')
 def edit_chama(request, pk):
     chama = get_object_or_404(Chama, pk=pk)
     if not is_admin_or_secretary(request.user, chama):
@@ -92,11 +92,11 @@ def edit_chama(request, pk):
     else:
         form = ChamaForm(instance=chama)
 
-    return render(request, 'chama/chama_form.html', {'form': form, 'edit_mode': True})
+    return render(request, 'chama/create_chama.html', {'form': form, 'edit_mode': True})
 
 # View 5: Request to Join a Chama
 
-@login_required
+@login_required(login_url='login')
 def join_chama(request, pk):
     chama = get_object_or_404(Chama, pk=pk)
     current_members = Membership.objects.filter(membership_chama=chama).count()
@@ -123,9 +123,25 @@ def join_chama(request, pk):
 
     return redirect('chama_detail', pk=pk)
 
-# View 6: Handle Join Requests (Admin/Secretary Only)
+# view 6: Shows only the chamas the current logged in user belong to
+@login_required(login_url='login')
+def my_chamas(request):
+    """Display the chamas the logged-in user belongs to."""
+    memberships = Membership.objects.select_related('membership_chama').filter(
+        membership_user=request.user,
+        membership_status='active'
+    )
+    chamas = [m.membership_chama for m in memberships]
 
-@login_required
+    context = {
+        "chamas": chamas,
+        "memberships": memberships
+    }
+    return render(request, "chama/my_chamas.html", context)
+
+# View 7: Handle Join Requests (Admin/Secretary Only)
+
+@login_required(login_url='login')
 def handle_join_request(request, request_id, action):
     join_request = get_object_or_404(JoinRequest, id=request_id)
     chama = join_request.join_request_chama
@@ -151,9 +167,10 @@ def handle_join_request(request, request_id, action):
     join_request.save()
     return redirect('chama_detail', pk=chama.pk)
 
-# View 7: Suspend a Member (Admin/Secretary Only)
+# View 8: Suspend a Member (Admin/Secretary Only)
 
-@login_required
+@login_required(login_url='login')
+
 def suspend_member(request, membership_id):
     membership = get_object_or_404(Membership, id=membership_id)
     chama = membership.membership_chama
