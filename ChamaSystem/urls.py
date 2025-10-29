@@ -20,5 +20,7 @@ from django.urls import path,include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('user/', include('user.urls')),
+    path('chama/', include(('chama.urls', 'chama'), namespace='chama')),
+    path('dashboard/', include('dashboard.urls')),
     path('user/', include('django.contrib.auth.urls'))
 ]

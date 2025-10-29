@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'chama',
     'dashboard',
 ]
+LOGIN_URL = 'login'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
