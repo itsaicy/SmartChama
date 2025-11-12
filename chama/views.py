@@ -7,6 +7,7 @@ from chama.models import Chama, Membership, JoinRequest
 from chama.forms import ChamaForm
 from chama.utils import is_chama_admin, is_chama_secretary, is_admin_or_secretary
 
+app_name = 'chama'
 
 # View 1: List All Chamas
 
@@ -14,10 +15,20 @@ from chama.utils import is_chama_admin, is_chama_secretary, is_admin_or_secretar
 def chama_list(request):
     """Show all available chamas."""
     chamas = Chama.objects.all().order_by('-chama_created_at')
+
+     # Get IDs of chamas where the user has pending join requests
+    user_join_requests = JoinRequest.objects.filter(
+        join_request_user=request.user,
+        join_request_status='pending'
+    ).values_list('join_request_chama_id', flat=True)
+
+    context = {
+        'chamas': chamas,
+        'user_join_requests': user_join_requests,
+    }
     return render(request, 'chama/chama_list.html', {'chamas': chamas})
 
 # View 2: Create a New Chama
-
 @login_required(login_url="login")
 def create_chama(request):
     """Allow any logged-in user to create a chama."""
@@ -33,7 +44,7 @@ def create_chama(request):
                 membership_role='admin'
             )
             messages.success(request, f"Chama '{chama.chama_name}' created successfully!")
-            return redirect('chama_detail', pk=chama.pk)
+            return redirect('chama:chama_detail', pk=chama.pk)
         else:
             messages.error(request, "Please correct the errors below.")
     else:
@@ -81,14 +92,14 @@ def edit_chama(request, pk):
     chama = get_object_or_404(Chama, pk=pk)
     if not is_admin_or_secretary(request.user, chama):
         messages.error(request, "You don't have permission to edit this chama.")
-        return redirect('chama_detail', pk=pk)
+        return redirect('chama:chama_detail', pk=chama.pk)
 
     if request.method == 'POST':
         form = ChamaForm(request.POST, instance=chama)
         if form.is_valid():
             form.save()
             messages.success(request, "Chama details updated successfully.")
-            return redirect('chama_detail', pk=pk)
+            return redirect('chama:chama_detail', pk=chama.pk)
     else:
         form = ChamaForm(instance=chama)
 
@@ -103,11 +114,11 @@ def join_chama(request, pk):
 
     if current_members >= chama.chama_max_members:
         messages.warning(request, f"'{chama.chama_name}' is already full.")
-        return redirect('chama_detail', pk=pk)
+        return redirect('chama:chama_detail', pk=chama.pk)
 
     if Membership.objects.filter(membership_user=request.user, membership_chama=chama).exists():
         messages.info(request, "You are already a member of this chama.")
-        return redirect('chama_detail', pk=pk)
+        return redirect('chama:chama_detail', pk=chama.pk)
 
     existing_request = JoinRequest.objects.filter(
         join_request_user=request.user,
@@ -121,7 +132,7 @@ def join_chama(request, pk):
         JoinRequest.objects.create(join_request_user=request.user, join_request_chama=chama)
         messages.success(request, f"Join request sent to '{chama.chama_name}'.")
 
-    return redirect('chama_detail', pk=pk)
+    return redirect('chama:chama_detail', pk=chama.pk)
 
 # view 6: Shows only the chamas the current logged in user belong to
 @login_required(login_url='login')
@@ -133,12 +144,20 @@ def my_chamas(request):
     )
     chamas = [m.membership_chama for m in memberships]
 
+    for chama in chamas:
+        # All members regardless of status
+        chama.all_members = Membership.objects.filter(
+            membership_chama=chama
+        ).select_related('membership_user')
+
+        chama.member_count = chama.all_members.count()
+        chama.max_members = chama.chama_max_members  # assuming this field exists
+
     context = {
         "chamas": chamas,
         "memberships": memberships
     }
     return render(request, "chama/my_chamas.html", context)
-
 # View 7: Handle Join Requests (Admin/Secretary Only)
 
 @login_required(login_url='login')
@@ -148,7 +167,7 @@ def handle_join_request(request, request_id, action):
 
     if not is_admin_or_secretary(request.user, chama):
         messages.error(request, "You don't have permission to manage join requests.")
-        return redirect('chama_detail', pk=chama.pk)
+        return redirect('chama:chama_detail', pk=chama.pk)
 
     if action == 'accept':
         Membership.objects.create(
@@ -165,7 +184,7 @@ def handle_join_request(request, request_id, action):
     join_request.join_request_reviewed_by = request.user
     join_request.join_request_reviewed_at = timezone.now()
     join_request.save()
-    return redirect('chama_detail', pk=chama.pk)
+    return redirect('chama:chama_detail', pk=chama.pk)
 
 # View 8: Suspend a Member (Admin/Secretary Only)
 
@@ -177,10 +196,10 @@ def suspend_member(request, membership_id):
 
     if not is_admin_or_secretary(request.user, chama):
         messages.error(request, "You don't have permission to suspend members.")
-        return redirect('chama_detail', pk=chama.pk)
+        return redirect('chama:chama_detail', pk=chama.pk)
 
     membership.membership_status = 'inactive'
     membership.save()
     messages.warning(request, f"{membership.membership_user} has been suspended.")
-    return redirect('chama_detail', pk=chama.pk)
+    return redirect('chama:chama_detail', pk=chama.pk)
 

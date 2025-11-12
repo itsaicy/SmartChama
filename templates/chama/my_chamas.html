@@ -1,99 +1,148 @@
-{% extends 'base.html' %}
+{% extends 'chama/chama_base.html' %}
 {% load static %}
+{% block title %}My Chamas - SmartChama{% endblock %}
 {% block content %}
-<div class="container mt-5">
-  <h2 class="mb-4 text-center fw-bold text-primary">My Chamas</h2>
-
-  <!-- Search and Filter -->
-  <div class="d-flex justify-content-between mb-3">
-    <div class="input-group w-50">
-      <span class="input-group-text"><i class="fas fa-search"></i></span>
-      <input type="text" id="searchInput" class="form-control" placeholder="Search chama name...">
+<div class="my-chamas-container">
+    <div class="page-header">
+        <h1 class="chama-page-title">My Chamas</h1>
+        <div class="header-actions">
+            <a href="" class="btn btn-outline">
+                <span>📱</span> Join via Code
+            </a>
+            <a href="{% url 'chama:create_chama' %}" class="btn btn-primary">
+                <span>➕</span> New Chama
+            </a>
+        </div>
     </div>
-    <div>
-      <select id="filterStatus" class="form-select">
-        <option value="">Filter by Status</option>
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-      </select>
+
+    <div class="chamas-table-wrapper">
+        <table class="table chama-table">
+          <thead>
+            <tr>
+                <th class="chama-th">Chama</th>
+                <th class="chama-th">Members</th>
+                <th class="chama-th">Contribution Progress</th>
+                <th class="chama-th">Frequency</th>
+                <th class="chama-th">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for chama in chamas %}
+            <tr class="chama-row">
+              <td>
+                <div class="chama-name-cell">
+                    {% if chama.chama_logo %}
+                    <img src="" alt="{{ chama.chama_name }}" class="chama-avatar">
+                    {% else %}
+                    <div class="chama-avatar-placeholder">
+                        {{ chama.chama_name|slice:":2"|upper }}
+                    </div>
+                    {% endif %}
+                    <div class="chama-info-cell">
+                        <h3>{{ chama.chama_name }}</h3>
+                        <p>Target: KES {{ chama.chama_contribution_target|floatformat:0|default:"N/A" }}</p>
+                    </div>
+                </div>
+              </td>
+              <td>{{ chama.member_count }} / {{ chama.max_members }}</td>
+              <td>
+                <div class="progress-container">
+                    {% if chama.chama_contribution_target %}
+                    {% widthratio chama.chama_total_contributions chama.chama_contribution_target 100 as progress_percent %}
+                    <div class="progress-text">
+                        <span>KES {{ chama.chama_total_contributions|floatformat:0|default:"0" }}</span>
+                        <span>{{ progress_percent }}%</span>
+                    </div>
+                    {% with rounded=progress_percent|add:"5"|divisibleby:10|stringformat:"d" %}
+                    <div class="chama-progress">
+                      <div class="progress-bar-fill progress-{{ rounded }}"></div>
+                    </div>
+                    {% endwith %}
+
+                    {% else %}
+                    <span class="text-muted">No target set</span>
+                    {% endif %}
+                </div>
+              </td>
+              <td>
+                  <span class="badge badge-{{ chama.chama_contribution_frequency|lower }}">
+                      {{ chama.chama_contribution_frequency }}
+                  </span>
+              </td>
+              <td>
+                  <button class="toggle-btn" data-chama-id="{{ chama.id }}">View Members</button>
+              </td>
+            </tr>
+            <tr class="members-panel" id="members-{{ chama.id }}">
+              <td colspan="5">
+                <div class="members-content">
+                  <h4 class="member-section-title">{{chama.chama_name}} Chama Members</h4>
+                    {% if chama.all_members %}
+                    <div class="members-table-wrapper">
+                      <table class="table members-table">
+                        <thead>
+                          <tr>
+                              <th>Profile</th>
+                              <th>Name</th>
+                              <th>Role</th>
+                              <th>Contribution</th>
+                              <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for member in chama.all_members %}
+                          <tr>
+                            <td>
+                                {% if member.membership_user.user_profile_picture %}
+                                  <img src="{{ member.membership_user.user_profile_picture.url }}" 
+                                       alt="{{ member.membership_user.get_full_name }}" 
+                                       class="member-profile-pic">
+                                {% else %}
+                                  <div class="member-avatar-placeholder">
+                                      {{ member.membership_user.user_first_name|slice:":1"|upper }}{{ member.membership_user.user_last_name|slice:":1"|upper }}
+                                  </div>
+                                {% endif %}
+                            </td>
+                            <td class="member-name">
+                                {{ member.membership_user.user_first_name|default:member.membership_user.user_email }}
+                                {{ member.membership_user.user_last_name|default:member.membership_user.user_email }}
+                            </td>
+                            <td>
+                              <span class="member-role-badge">
+                                  {{ member.membership_role|default:"Member" }}
+                              </span>
+                            </td>
+                            <td class="member-contribution">
+                                KES {{ member.membership_total_contribution|floatformat:0|default:"0" }}
+                            </td>
+                            <td>
+                              <span class="status-badge status-{{ member.membership_status|lower }}">
+                                  {{ member.membership_status }}
+                              </span>
+                            </td>
+                          </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                    {% else %}
+                      <p class="no-members">No members found in this chama.</p>
+                    {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center py-5">
+                    <p class="no-chamas-msg">You haven't joined any chamas yet.</p>
+                    <a href="{% url 'chama:create_chama' %}" class="btn btn-primary mt-3">Create Your First Chama</a>
+                </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
     </div>
-  </div>
-
-  <!-- Chama Table -->
-  <div class="table-responsive">
-    <table class="table table-hover table-striped align-middle">
-      <thead class="table-primary">
-        <tr>
-          <th>#</th>
-          <th>Chama Name</th>
-          <th>Contribution</th>
-          <th>Frequency</th>
-          <th>Members</th>
-          <th>Created On</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="chamaTable">
-        {% for chama in chamas %}
-        <tr data-status="{{ chama.status|lower }}">
-          <td>{{ forloop.counter }}</td>
-          <td>{{ chama.chama_name }}</td>
-          <td>KSh {{ chama.chama_contribution_amount }}</td>
-          <td>{{ chama.chama_contribution_frequency }}</td>
-          <td>{{ chama.total_members }}</td>
-          <td>{{ chama.chama_created_at|date:"Y-m-d" }}</td>
-          <td>
-            <span class="badge {% if chama.status == 'Active' %}bg-success{% else %}bg-secondary{% endif %}">
-              {{ chama.status }}
-            </span>
-          </td>
-          <td>
-            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#details{{ forloop.counter }}">
-              <i class="fas fa-chevron-down"></i>
-            </button>
-          </td>
-        </tr>
-
-        <!-- Collapsible Details Row -->
-        <tr class="collapse" id="details{{ forloop.counter }}">
-          <td colspan="8">
-            <div class="p-3 bg-light rounded">
-              <strong>Description:</strong> {{ chama.chama_description }}<br>
-              <strong>Created by:</strong> {{ chama.chama_created_by }}<br>
-              <strong>Total Contributions:</strong> KSh {{ chama.total_contributions|default:"0" }}<br>
-              <strong>Next Meeting:</strong> {{ chama.next_meeting|default:"Not scheduled" }}
-            </div>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="8" class="text-center text-muted">No chamas found.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
 </div>
 
-<!-- JavaScript for Search and Filter -->
-<script>
-document.getElementById('searchInput').addEventListener('keyup', function () {
-  const query = this.value.toLowerCase();
-  const rows = document.querySelectorAll('#chamaTable tr[data-status]');
-  rows.forEach(row => {
-    const name = row.cells[1].textContent.toLowerCase();
-    row.style.display = name.includes(query) ? '' : 'none';
-  });
-});
-
-document.getElementById('filterStatus').addEventListener('change', function () {
-  const filter = this.value;
-  const rows = document.querySelectorAll('#chamaTable tr[data-status]');
-  rows.forEach(row => {
-    const status = row.getAttribute('data-status');
-    row.style.display = !filter || status === filter ? '' : 'none';
-  });
-});
-</script>
+<script src="{% static 'js/chama.js' %}"></script>
 {% endblock %}

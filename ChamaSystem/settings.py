@@ -43,7 +43,12 @@ INSTALLED_APPS = [
     'user',
     'chama',
     'dashboard',
+    'crispy_forms',
+    'crispy_bootstrap5',
 ]
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+
 LOGIN_URL = 'login'
 
 MIDDLEWARE = [
@@ -125,15 +130,43 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
     BASE_DIR / "static", 
     BASE_DIR / "env/lib/python3.12/site-packages/fontawesomefree", 
 ]
 
+STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGIN_REDIRECT_URL = '/'
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+POSTGRES_LOCALLY = os.getenv('POSTGRES_LOCALLY', 'False') == 'True'
+
+
+if ENVIRONMENT == 'production' or POSTGRES_LOCALLY:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = os.getenv('EMAIL_ADDRESS')
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+    DEFAULT_FROM_EMAIL = 'Chama'
+    ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
+
+    PASSWORD_RESET_TIMEOUT =14400
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_REQUIRED = True
+
 AUTH_USER_MODEL = 'user.User'
