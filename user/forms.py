@@ -63,3 +63,28 @@ class RegistrationForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+
+class UserProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = [
+            'user_first_name',
+            'user_last_name',
+            'user_email',
+            'user_phone_number',
+            'user_national_id',
+            'user_profile_picture'
+        ]
+        labels = {
+            'user_first_name': 'First Name',
+            'user_last_name': 'Last Name',
+            'user_email': 'Email',
+            'user_phone_number': 'Phone Number',
+            'user_profile_picture': 'Profile Picture'
+        }
+        widgets = {
+            'user_first_name': forms.TextInput(attrs={'placeholder': 'First Name', 'class': 'form-control'}),
+            'user_last_name': forms.TextInput(attrs={'placeholder': 'Last Name', 'class': 'form-control'}),
+            'user_email': forms.EmailInput(attrs={'placeholder': 'Email Address', 'class': 'form-control'}),
+            'user_phone_number': forms.TextInput(attrs={'placeholder': 'Phone Number', 'class': 'form-control'}),
+       }

@@ -1,0 +1,15 @@
+{% autoescape off %}
+Hi {{ user.user_first_name }},
+
+Welcome to SmartChama! 🎉
+
+Please click the button below to activate your account:
+
+<a href="{{ protocol }}://{{ domain }}{% url 'activate' uidb64=uid token=token %}" style="background-color:#F9A825; padding:10px 20px; color:white; text-decoration:none; border-radius:6px;">Activate My Account</a>
+
+If the button does not work, copy and paste this link into your browser:
+{{ protocol }}://{{ domain }}{% url 'activate' uidb64=uid token=token %}
+
+Thanks for joining us,
+The SmartChama Team
+{% endautoescape %}
