@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+from decouple import config
 from pathlib import Path
 import os
 from dotenv import load_dotenv
@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'user',
     'chama',
     'dashboard',
+    'notification',
+    'darajaapi',
     'crispy_forms',
     'crispy_bootstrap5',
 ]
@@ -168,5 +170,8 @@ else:
 
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_REQUIRED = True
+
+MPESA_CONSUMER_KEY = config('MPESA_CONSUMER_KEY')
+MPESA_CONSUMER_SECRET = config('MPESA_CONSUMER_SECRET')
 
 AUTH_USER_MODEL = 'user.User'
