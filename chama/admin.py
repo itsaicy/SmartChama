@@ -10,12 +10,53 @@ class ChamaAdmin(admin.ModelAdmin):
         "chama_contribution_frequency",
         "chama_max_members",
         "chama_rota_type",
+        "chama_payment_method",
+        "chama_paybill_number",
+        "chama_till_number",
         "chama_created_at",
     )
+
     search_fields = ("chama_name", "chama_description")
-    list_filter = ("chama_contribution_frequency", "chama_rota_type", "chama_created_at")
+    list_filter = (
+        "chama_contribution_frequency",
+        "chama_rota_type",
+        "chama_payment_method",
+        "chama_created_at",
+    )
     ordering = ("-chama_created_at",)
     readonly_fields = ("chama_created_at",)
+
+    fieldsets = (
+        ("Chama Details", {
+            "fields": (
+                "chama_name",
+                "chama_description",
+                "chama_created_by",
+                "chama_contribution_amount",
+                "chama_contribution_frequency",
+                "chama_custom_frequency_days",
+                "chama_max_members",
+                "chama_rota_type",
+            )
+        }),
+
+        ("Payment Method (Choose ONLY one)", {
+            "fields": (
+                "chama_payment_method",
+                "chama_paybill_number",
+                "chama_paybill_name",
+                "chama_paybill_account_number",
+                "chama_till_number",
+                "chama_till_name",
+            ),
+            "description": "Select Paybill or Till. Do NOT fill both. The form will block invalid combinations."
+        }),
+        
+        ("Metadata", {
+            "fields": ("chama_created_at",),
+        }),
+    )
+
 
 
 @admin.register(Membership)

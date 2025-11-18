@@ -40,22 +40,28 @@
                     {% endif %}
                     <div class="chama-info-cell">
                         <h3>{{ chama.chama_name }}</h3>
-                        <p>Target: KES {{ chama.chama_contribution_target|floatformat:0|default:"N/A" }}</p>
+                        <p> 
+                          {% if chama.chama_target_amount %}
+                            Target: KES {{ chama.chama_target_amount|floatformat:0 }}
+                          {% else %}
+                            Target: KES N/A
+                          {% endif %}
+                        </p>
                     </div>
                 </div>
               </td>
               <td>{{ chama.member_count }} / {{ chama.max_members }}</td>
               <td>
                 <div class="progress-container">
-                    {% if chama.chama_contribution_target %}
-                    {% widthratio chama.chama_total_contributions chama.chama_contribution_target 100 as progress_percent %}
+                    {% if chama.chama_target_amount %}
+                    {% widthratio chama.chama_total_contributions chama.chama_target_amount 100 as progress_percent %}
                     <div class="progress-text">
                         <span>KES {{ chama.chama_total_contributions|floatformat:0|default:"0" }}</span>
                         <span>{{ progress_percent }}%</span>
                     </div>
                     {% with rounded=progress_percent|add:"5"|divisibleby:10|stringformat:"d" %}
                     <div class="chama-progress">
-                      <div class="progress-bar-fill progress-{{ rounded }}"></div>
+                        <div class="progress-bar-fill progress-{{ rounded }}"></div>
                     </div>
                     {% endwith %}
 
@@ -144,5 +150,4 @@
     </div>
 </div>
 
-<script src="{% static 'js/chama.js' %}"></script>
 {% endblock %}

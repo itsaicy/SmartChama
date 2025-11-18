@@ -1,15 +1,29 @@
 from django.db import models
 from user.models import User
 
-
 class Chama(models.Model):
-    chama_name = models.CharField(max_length=50)
-    chama_description = models.CharField(max_length=100)
+    PAYMENT_METHOD_CHOICES = (
+        ('none', 'None'),
+        ('paybill', 'Paybill'),
+        ('till', 'Till Number'),
+    )
+    chama_name = models.CharField(max_length=50, unique=True)
+    chama_description = models.CharField(max_length=255)
     chama_created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     chama_created_at = models.DateTimeField(auto_now_add=True)
-    chama_contribution_amount = models.FloatField()
+    chama_contribution_amount = models.DecimalField(max_digits=8,decimal_places=2)
+    chama_payment_method = models.CharField(
+        max_length=10,
+        choices=PAYMENT_METHOD_CHOICES,
+        default='none'
+    )
+    chama_paybill_number = models.CharField(max_length=6, null=True, blank=True)
+    chama_paybill_name = models.CharField(max_length=50, null=True, blank=True)
+    chama_paybill_account_number = models.CharField(max_length=20, null=True, blank=True)
+    chama_till_number = models.CharField(max_length=6, null=True, blank=True)
+    chama_till_name = models.CharField(max_length=50, null=True, blank=True)
     chama_contribution_frequency = models.CharField(
-        max_length=20,
+        max_length=7,
         choices=[
             ('weekly', 'Weekly'),
             ('monthly', 'Monthly'),
@@ -34,7 +48,10 @@ class Chama(models.Model):
     
     def __str__(self):
         return self.chama_name
-
+    @property
+    def chama_target_amount(self):
+        active_members = self.members.filter(membership_status='active').count()
+        return active_members * self.chama_contribution_amount
 
 class Membership(models.Model):
     membership_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='memberships')

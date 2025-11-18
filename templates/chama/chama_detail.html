@@ -38,7 +38,7 @@
         <ul class="member-list">
           {% for member in members %}
             <li>
-              <span class="member-name">{{ member.user.username }}</span>
+              <span class="member-name">{{ member.user.user_first_name }}</span>
               <span class="member-role">{{ member.role|title }}</span>
             </li>
           {% endfor %}

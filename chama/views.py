@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from chama.models import Chama, Membership, JoinRequest
-from chama.forms import ChamaForm
+from chama.forms import ChamaForm, ChamaPaymentForm
 from chama.utils import is_chama_admin, is_chama_secretary, is_admin_or_secretary
 
 app_name = 'chama'
@@ -31,6 +31,7 @@ def chama_list(request):
 # View 2: Create a New Chama
 @login_required(login_url="login")
 def create_chama(request):
+    payment_form = ChamaPaymentForm() 
     """Allow any logged-in user to create a chama."""
     if request.method == 'POST':
         form = ChamaForm(request.POST)
@@ -50,8 +51,10 @@ def create_chama(request):
     else:
         form = ChamaForm()
 
-    return render(request, 'chama/create_chama.html', {'form': form})
-
+    return render(request, 'chama/create_chama.html', {
+    'form': form,
+    'payment_form': payment_form, 
+})
 # View 3: Chama Detail
 
 @login_required(login_url='login')

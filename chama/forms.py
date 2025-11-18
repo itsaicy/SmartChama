@@ -42,3 +42,46 @@ class ChamaForm(forms.ModelForm):
                 'class': 'form-select'
             }),
         }
+
+class ChamaPaymentForm(forms.ModelForm):
+    class Meta:
+        model = Chama
+        fields = [
+            'chama_payment_method',
+            'chama_paybill_number',
+            'chama_paybill_name',
+            'chama_paybill_account_number',
+            'chama_till_number',
+            'chama_till_name',
+        ]
+        widgets = {
+            'chama_payment_method': forms.Select(attrs={'class': 'form-select'}),
+            'chama_paybill_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'chama_paybill_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'chama_paybill_account_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'chama_till_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'chama_till_name': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        chama_payment_method = cleaned_data.get("chama_payment_method")
+
+        paybill_number = cleaned_data.get("chama_paybill_number")
+        till_number = cleaned_data.get("chama_till_number")
+
+        # If Paybill is selected
+        if chama_payment_method == "paybill":
+            if not paybill_number:
+                raise forms.ValidationError("Paybill number is required.")
+            if till_number:
+                raise forms.ValidationError("You cannot fill Till fields when Paybill is selected.")
+
+        # If Till is selected
+        if chama_payment_method == "till":
+            if not till_number:
+                raise forms.ValidationError("Till number is required.")
+            if paybill_number:
+                raise forms.ValidationError("You cannot fill Paybill fields when Till is selected.")
+
+        return cleaned_data
