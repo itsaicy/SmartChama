@@ -19,13 +19,15 @@ from django.urls import path,include
 from django.conf import settings
 from django.conf.urls.static import static
 
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('user/', include('user.urls')),
+    path('user/', include('django.contrib.auth.urls')),
     path('chama/', include(('chama.urls', 'chama'), namespace='chama')),
     path('dashboard/', include('dashboard.urls')),
-    path('user/', include('django.contrib.auth.urls'))
+    path('notification/', include('notification.urls')),
+    path("api/mpesa/", include("darajaapi.urls")),
+    path('finance/', include(('finance.urls', 'finance'), namespace='finance')),
 ]
 
 if settings.DEBUG:

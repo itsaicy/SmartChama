@@ -1,0 +1,109 @@
+{% extends 'chama/chama_base.html' %}
+{% load static %}
+
+{% block title %}Join Requests - SmartChama{% endblock %}
+
+{% block content %}
+<div class="join-requests-container">
+    <!-- Header -->
+    <div class="join-requests-header">
+        <button class="back-btn" onclick="window.history.back()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+        </button>
+        <h2 class="join-requests-title">Join Requests</h2>
+        <button class="menu-btn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="5" r="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="12" cy="19" r="2"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Pending Requests Section -->
+    <div class="requests-section">
+        <h3 class="section-title">PENDING ({{ pending_requests.count }})</h3>
+        
+        {% for request in pending_requests %}
+        <div class="request-card">
+            <div class="request-profile">
+                {% if request.join_request_user.user_profile_picture %}
+                <img src="{{ request.join_request_user.user_profile_picture.url }}" alt="{{ request.join_request_user.user_first_name }} {{ request.join_request_user.user_last_name }}" class="profile-pic">
+                {% else %}
+                <div class="profile-pic-placeholder">
+                    {{ request.join_request_user.user_first_name.0|upper }}{{ request.join_request_user.user_last_name.0|upper }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="request-info">
+                <h4 class="requester-name">{{ request.join_request_user.user_first_name }} {{ request.join_request_user.user_last_name }}</h4>
+                <p class="requester-email">{{ request.join_request_user.user_email }}</p>
+                <p class="request-time">Requested {{ request.join_request_requested_at|timesince }} ago</p>
+            </div>
+            
+            <div class="request-actions">
+                <button class="btn-decline" data-request-id="{{ request.id }}">
+                    Decline
+                </button>
+                <button class="btn-accept" data-request-id="{{ request.id }}">
+                    Accept
+                </button>
+            </div>
+        </div>
+        {% empty %}
+        <div class="no-requests">
+            <p>No pending join requests</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- History Section -->
+    <div class="requests-section">
+        <h3 class="section-title">HISTORY</h3>
+        
+        {% for request in history_requests %}
+        <div class="request-card history-card">
+            <div class="request-profile">
+                {% if request.join_request_user.user_profile_picture %}
+                <img src="{{ request.join_request_user.user_profile_picture.url }}" alt="{{ request.join_request_user.user_first_name }} {{ request.join_request_user.user_last_name }}" class="profile-pic">
+                {% else %}
+                <div class="profile-pic-placeholder">
+                    {{ request.join_request_user.user_first_name.0|upper }}{{ request.join_request_user.user_last_name.0|upper }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="request-info">
+                <h4 class="requester-name">{{ request.join_request_user.user_first_name }} {{ request.join_request_user.user_last_name }}</h4>
+                <p class="requester-email">{{ request.join_request_user.user_email }}</p>
+            </div>
+            
+            <div class="request-status">
+                {% if request.join_request_status == 'accepted' %}
+                <span class="status-accepted">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <path d="M20 6L9 17l-5-5"/>
+                    </svg>
+                    Accepted
+                </span>
+                {% elif request.join_request_status == 'rejected' %}
+                <span class="status-declined">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                    Declined
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="no-requests">
+            <p>No history</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

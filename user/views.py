@@ -122,9 +122,21 @@ def edit_profile(request):
 
 @login_required
 def upload_profile_picture(request):
-    if request.method == 'POST' and request.FILES.get('user_profile_picture'):
-        user = request.user
-        user.user_profile_picture = request.FILES['user_profile_picture']
-        user.save()
-        return JsonResponse({'status': 'success', 'image_url': user.user_profile_picture.url})
-    return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
+    if request.method == 'POST':
+        # Check if file is provided in the request
+        if 'user_profile_picture' in request.FILES:
+            user = request.user
+            user.user_profile_picture = request.FILES['user_profile_picture']
+            user.save()
+            messages.success(request, "Profile picture updated successfully!")
+        elif 'profile_image' in request.FILES: 
+            # Handle case where input name might be different in dashboard HTML
+            user = request.user
+            user.user_profile_picture = request.FILES['profile_image']
+            user.save()
+            messages.success(request, "Profile picture updated successfully!")
+        else:
+            messages.error(request, "No image selected.")
+
+    # Redirect back to the page the user came from (The Dashboard)
+    return redirect(request.META.get('HTTP_REFERER', '/'))

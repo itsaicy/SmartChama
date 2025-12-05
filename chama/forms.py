@@ -66,7 +66,6 @@ class ChamaPaymentForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         chama_payment_method = cleaned_data.get("chama_payment_method")
-
         paybill_number = cleaned_data.get("chama_paybill_number")
         till_number = cleaned_data.get("chama_till_number")
 

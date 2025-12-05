@@ -1,0 +1,49 @@
+{% extends "notification/meeting/meeting_base.html" %}
+{% block title %}{% if meeting %}Edit Meeting{% else %}Schedule Meeting{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center">
+  <div class="card">
+    <h2 class="mb-4 text-center">
+      {% if meeting %}Edit Meeting{% else %}Schedule Meeting{% endif %}
+    </h2>
+
+    <form method="POST" action="" id="meeting-form">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+
+      {% for field in form %}
+      <div class="mb-3 {% if field.name == 'meeting_venue' %}venue-field{% elif field.name == 'meeting_online_link' %}online-field{% endif %}">
+        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}
+          <div class="text-danger small">{{ field.errors|striptags }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      <div class="d-flex justify-content-center gap-3 mt-4">
+        <button type="submit" class="btn filter-btn">
+          {% if meeting %}Update{% else %}Save Meeting{% endif %}
+        </button>
+        <a href="{% url 'notification:meeting_list' %}" class="btn filter-btn">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function toggleFields() {
+    const type = document.getElementById('meeting_type').value;
+    document.querySelector('.venue-field').style.display = type === 'physical' ? 'block' : 'none';
+    document.querySelector('.online-field').style.display = type === 'online' ? 'block' : 'none';
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    toggleFields();
+    document.getElementById('meeting_type').addEventListener('change', toggleFields);
+  });
+</script>
+{% endblock %}

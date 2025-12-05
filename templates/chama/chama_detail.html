@@ -1,65 +1,105 @@
 {% extends "chama/chama_base.html" %}
+{% load static %}
 {% block content %}
+
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
 <div class="container">
-  <div class="box">
-    <div class="top-header">
-      <h3>{{ chama.chama_name }}</h3>
-      <p class="description">{{ chama.chama_description }}</p>
+  <div class="box" style="max-width: 900px;">
+    
+    <div class="top-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+          <h3>{{ chama.chama_name }}</h3>
+          <p class="description">{{ chama.chama_description }}</p>
+      </div>
+      {% if is_admin %}
+      <a href="{% url 'chama:edit_chama' chama.id %}" class="btn btn-outline" style="padding: 8px 15px; font-size: 14px;">
+          Edit Details
+      </a>
+      {% endif %}
     </div>
 
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
     <div class="chama-info">
-      <div class="info-item">
-        <label>Contribution Amount:</label>
-        <span>Ksh {{ chama.chama_contribution_amount }}</span>
-      </div>
-      <div class="info-item">
-        <label>Frequency:</label>
-        <span>{{ chama.chama_contribution_frequency }}</span>
-      </div>
-      {% if chama.chama_custom_frequency_days %}
-      <div class="info-item">
-        <label>Custom Frequency (Days):</label>
-        <span>{{ chama.chama_custom_frequency_days }}</span>
-      </div>
-      {% endif %}
-      <div class="info-item">
-        <label>Maximum Members:</label>
-        <span>{{ chama.chama_max_members }}</span>
-      </div>
-      <div class="info-item">
-        <label>Rota Type:</label>
-        <span>{{ chama.chama_rota_type }}</span>
-      </div>
+      <div class="info-item"><label>Contribution</label><span>KES {{ chama.chama_contribution_amount }}</span></div>
+      <div class="info-item"><label>Frequency</label><span>{{ chama.chama_contribution_frequency|title }}</span></div>
+      <div class="info-item"><label>Next Contribution</label><span></span></div>
+      <div class="info-item"><label>Members</label><span>{{ members.count }} / {{ chama.chama_max_members }}</span></div>
     </div>
 
     <div class="members-section">
-      <h4>Members ({{ members.count }})</h4>
-      {% if members %}
-        <ul class="member-list">
-          {% for member in members %}
-            <li>
-              <span class="member-name">{{ member.user.user_first_name }}</span>
-              <span class="member-role">{{ member.role|title }}</span>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p class="no-members">No members yet.</p>
-      {% endif %}
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h4>Members List</h4>
+          {% if is_admin %}
+          <a href="{% url 'chama:join_requests' chama.id %}" class="btn" style="font-size: 13px;">
+              Review Join Requests
+          </a>
+          {% endif %}
+      </div>
+
+      <div class="member-list">
+        {% for member in members %}
+          <div class="member-list-item">
+            <div class="member-info">
+                <div class="member-avatar-small">
+                    {{ member.membership_user.user_first_name.0|upper }}
+                </div>
+                <div>
+                    <div style="font-weight: 600;">{{ member.membership_user.user_first_name }} {{ member.membership_user.user_last_name }}</div>
+                    <span class="role-badge role-{{ member.membership_role }}">{{ member.membership_role }}</span>
+                </div>
+            </div>
+
+            {% if is_admin %}
+            <div class="actions">
+                {% if member.membership_user != request.user %}
+                <button class="btn-outline" 
+                        style="padding: 5px 10px; font-size: 12px;"
+                        onclick="openRoleModal('{{ member.id }}', '{{ member.membership_user.user_first_name }}')">
+                    Assign Role
+                </button>
+                {% endif %}
+            </div>
+            {% endif %}
+          </div>
+        {% empty %}
+          <p class="text-muted">No members yet.</p>
+        {% endfor %}
+      </div>
     </div>
 
-    <div class="actions">
-      {% if user.is_authenticated %}
-        {% if not is_member %}
-          <form method="post" action="">
+    {% if not is_member %}
+      <div style="text-align: center; margin-top: 30px;">
+          <form method="post" action="{% url 'chama:join_chama' chama.id %}">
             {% csrf_token %}
-            <button type="submit" class="submit">Join Chama</button>
+            <button type="submit" class="submit">Request to Join</button>
           </form>
-        {% else %}
-          <p class="joined-msg">You are already a member of this chama.</p>
-        {% endif %}
-      {% endif %}
-    </div>
+      </div>
+    {% endif %}
+
   </div>
 </div>
+
+<div id="roleModal" class="modal">
+  <div class="modal-content">
+    <span class="close-modal" onclick="closeRoleModal()">&times;</span>
+    <h4 style="color: var(--primary-green); margin-bottom: 20px;">Assign Role</h4>
+    <p>Change role for <span id="modalMemberName" style="font-weight: bold;"></span></p>
+    
+    <input type="hidden" id="selectedMemberId">
+    
+    <div class="input-field" style="margin: 20px 0;">
+        <select id="newRoleSelect">
+            <option value="member">Member</option>
+            <option value="secretary">Secretary</option>
+            <option value="treasurer">Treasurer</option>
+            <option value="admin">Admin</option>
+        </select>
+    </div>
+    
+    <button class="btn" onclick="submitRoleChange()">Update Role</button>
+  </div>
+</div>
+
 {% endblock content %}

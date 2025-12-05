@@ -1,0 +1,322 @@
+{% extends 'dashboard/dashboard_base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Admin Dashboard - SmartChama{% endblock %}
+
+{% block header %}Admin Dashboard{% endblock %}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">
+                <i class="fas fa-file-invoice-dollar me-2"></i>
+                Admin's Dashboard – {{ chama.chama_name }}
+            </h2>
+            
+            <div class="ms-1 mt-2">
+                <a href="{% url 'dashboard:full_report' chama.id %}" class="text-success text-decoration-none fw-bold" style="font-size: 0.9rem;">
+                    <i class="fas fa-arrow-down me-1"></i> Full Report
+                </a>
+            </div>
+        </div>
+    </div>
+
+
+{% block sidebar %}
+<div class="list-group list-group-flush">
+    <!-- Dashboard -->
+    <a href="{% url 'dashboard:admin_dashboard' active_chama.id %}" 
+       class="list-group-item list-group-item-action active-nav-item">
+        <i class="fas fa-th-large me-3"></i>Dashboard
+    </a>
+
+    <!-- Members -->
+    <a href="{% url 'chama:chama_detail' active_chama.id %}" 
+       class="list-group-item list-group-item-action">
+        <i class="fas fa-users me-3"></i>Members
+    </a>
+
+    <!-- Contributions -->
+    <a href="{% url 'finance:list_contributions' active_chama.id %}" 
+       class="list-group-item list-group-item-action">
+        <i class="fas fa-hand-holding-usd me-3"></i>Contributions
+    </a>
+
+    <!-- Loans -->
+    <a href="{% url 'finance:list_loans' active_chama.id %}" 
+       class="list-group-item list-group-item-action">
+        <i class="fas fa-file-invoice-dollar me-3"></i>Loans
+    </a>
+
+    <!-- Notifications -->
+    <a href="{% url 'notification:notification_list' %}" 
+       class="list-group-item list-group-item-action">
+        <i class="fas fa-bell me-3"></i>Notifications
+    </a>
+</div>
+
+{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card card-top-accent shadow-sm p-3 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 class="fw-bold mb-0">{{ total_members|default:"0" }}</h2>
+                    <p class="text-muted small text-uppercase fw-bold">Total Members</p>
+                </div>
+                <div class="icon-box bg-light text-primary rounded-circle p-2"><i class="fas fa-users fa-lg"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card card-top-accent shadow-sm p-3 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 class="fw-bold mb-0">Ksh {{ total_contributions|intcomma|default:"0" }}</h2>
+                    <p class="text-muted small text-uppercase fw-bold">Total Contributions</p>
+                </div>
+                <div class="icon-box bg-light text-success rounded-circle p-2"><i class="fas fa-hand-holding-usd fa-lg"></i></div>
+            </div>
+            <div class="text-muted small mt-2">
+                Pending: {{ pending_contributions|default:"0" }}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card card-top-accent shadow-sm p-3 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 class="fw-bold mb-0">{{ pending_payments|default:"0" }}</h2>
+                    <p class="text-muted small text-uppercase fw-bold">Pending Loan Repayments</p>
+                </div>
+                <div class="icon-box bg-light text-warning rounded-circle p-2"><i class="fas fa-file-invoice-dollar fa-lg"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card card-top-accent shadow-sm p-3 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h3 class="fw-bold mb-0">Ksh {{ chama_balance|intcomma|default:"0" }}</h3>
+                    <p class="text-muted small text-uppercase fw-bold">Cash at Hand</p>
+                </div>
+                <div class="icon-box bg-light text-info rounded-circle p-2"><i class="fas fa-coins fa-lg"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card card-top-accent shadow-sm p-3 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 class="fw-bold mb-0">Ksh {{ total_funds|intcomma|default:"0" }}</h2>
+                    <p class="text-muted small text-uppercase fw-bold">Total Funds</p>
+                </div>
+                <div class="icon-box bg-light text-primary rounded-circle p-2"><i class="fas fa-piggy-bank fa-lg"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card card-top-accent shadow-sm p-3 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 class="fw-bold mb-0">{{ progress_percent|floatformat:1 }}%</h2>
+                    <p class="text-muted small text-uppercase fw-bold">Goal Progress</p>
+                </div>
+                <div class="icon-box bg-light text-success rounded-circle p-2"><i class="fas fa-bullseye fa-lg"></i></div>
+            </div>
+            <div class="text-muted small mt-2">
+                Target: Ksh {{ target|intcomma|default:"0" }}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card card-top-accent shadow-sm p-3 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 class="fw-bold mb-0">{{ pending_count|default:"0" }}</h2>
+                    <p class="text-muted small text-uppercase fw-bold">Pending Contributions</p>
+                </div>
+                <div class="icon-box bg-light text-danger rounded-circle p-2"><i class="fas fa-user-clock fa-lg"></i></div>
+            </div>
+            <div class="text-muted small mt-2">
+                Expected: Ksh {{ pending_amount|intcomma|default:"0" }}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card card-top-accent shadow-sm p-3 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 class="fw-bold mb-0">{{ active_loans_count|default:"0" }}</h2>
+                    <p class="text-muted small text-uppercase fw-bold">Active Loans</p>
+                </div>
+                <div class="icon-box bg-light text-warning rounded-circle p-2"><i class="fas fa-wallet fa-lg"></i></div>
+            </div>
+            <div class="text-muted small mt-2">
+                Repayment: {{ repayment_progress|floatformat:1 }}%
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card card-top-accent shadow-sm p-3 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 class="fw-bold mb-0">Ksh {{ total_penalties|intcomma|default:"0" }}</h2>
+                    <p class="text-muted small text-uppercase fw-bold">Penalties</p>
+                </div>
+                <div class="icon-box bg-light text-danger rounded-circle p-2"><i class="fas fa-exclamation-circle fa-lg"></i></div>
+            </div>
+            <div class="text-muted small mt-2">
+                Missed: {{ missed_payments|default:"0" }}, Defaults: {{ loan_defaults|default:"0" }}
+            </div>
+        </div>
+        
+        <div class="card card-top-accent shadow-sm p-3 mt-3 h-50">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 class="fw-bold mb-0">{{ stk_success|default:"0" }}</h2>
+                    <p class="text-muted small text-uppercase fw-bold">STK Success</p>
+                </div>
+                <div class="icon-box bg-light text-success rounded-circle p-2"><i class="fas fa-check-circle fa-lg"></i></div>
+            </div>
+            <div class="text-muted small mt-2">
+                Failed: {{ stk_failed|default:"0" }}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <div class="card shadow-sm p-4 h-100">
+            <h5 class="fw-bold mb-3">Contributions (Last 6 Months)</h5>
+            <div style="height: 300px;">
+                <canvas id="contributionsChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm p-4 h-100">
+            <h5 class="fw-bold mb-3">Pending Join Requests</h5>
+            <div class="list-group list-group-flush">
+                {% if pending_requests %}
+                    {% for req in pending_requests %}
+                    <div class="list-group-item px-0 py-3 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <img src="https://ui-avatars.com/api/?name={{ req.join_request_user.get_full_name }}" 
+                                 alt="Avatar" class="rounded-circle me-3" width="40">
+                            <div>
+                                <h6 class="mb-0 fw-bold">{{ req.join_request_user.get_full_name }}</h6>
+                                <small class="text-muted">{{ req.join_request_user.user_email }}</small>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <form method="post" action="#"> 
+                                {% csrf_token %}
+                                <button type="button" class="btn btn-sm btn-success" disabled>Approve</button>
+                            </form>
+                            <form method="post" action="#">
+                                {% csrf_token %}
+                                <button type="button" class="btn btn-sm btn-danger" disabled>Reject</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-muted text-center py-4">No pending join requests found.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm p-4 h-100">
+            <h5 class="fw-bold mb-3">Recent Activity</h5>
+            <div class="list-group list-group-flush">
+                {% if recent_notifications %}
+                    {% for note in recent_notifications %}
+                    <div class="list-group-item px-0 py-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="mb-0 fw-bold">{{ note.notification_title }}</h6>
+                            <small class="text-muted">{{ note.notification_message|truncatewords:12 }}</small>
+                        </div>
+                        <small class="text-muted">{{ note.notification_created_at|date:"M d, H:i" }}</small>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-muted text-center py-4">No recent activity.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{{ contributions_history|json_script:"contributions-data" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('contributionsChart').getContext('2d');
+
+    // 2. Parse the JSON data from the script tag defined above
+    const rawData = JSON.parse(document.getElementById('contributions-data').textContent);
+
+    // 3. Process the data
+    // Handle case where rawData is empty or null
+    const historyData = rawData ? rawData : [];
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    // Map the data (ensure we handle cases where total might be null/None)
+    const labels = historyData.map(item => monthNames[item.contribution_time__month - 1]);
+    const data = historyData.map(item => item.total || 0); // Default to 0 if null
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Contributions (Ksh)',
+                data: data,
+                backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                borderColor: 'rgba(13, 110, 253, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { borderDash: [2, 2] }
+                },
+                x: { grid: { display: false } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+});
+</script>
+
+{% endblock %}

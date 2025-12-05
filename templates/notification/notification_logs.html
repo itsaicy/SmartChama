@@ -1,0 +1,81 @@
+{% extends 'notification/notification_base.html' %}
+{% load static %}
+{% block title %}Delivery Logs{% endblock %}
+{% block header_title %}Delivery Logs{% endblock %}
+
+{% block content %}
+<div class="mb-3 d-flex gap-2">
+  <a href="?status=all" class="filter-pill {% if status_filter == 'all' %}active{% endif %}">All</a>
+  <a href="?status=sent" class="filter-pill {% if status_filter == 'sent' %}active{% endif %}">Sent</a>
+  <a href="?status=pending" class="filter-pill {% if status_filter == 'pending' %}active{% endif %}">Pending</a>
+  <a href="?status=failed" class="filter-pill {% if status_filter == 'failed' %}active{% endif %}">Failed</a>
+</div>
+
+<div class="list-group">
+  {% for log in logs %}
+    <div class="list-group-item notif-card mb-3 log-row d-flex justify-content-between align-items-center">
+      <div>
+        <div class="fw-semibold d-flex align-items-center gap-2">
+          {{ log.notification.notification_title|default:"Notification" }}
+          {% if log.notification.notification_sender == request.user %}
+            <a href="{% url 'notification:edit_notification' log.notification.id %}" class="text-warning small">
+              <i class="bi bi-pencil-square"></i>
+            </a>
+            <a href="{% url 'notification:delete_notification' log.notification.id %}" 
+               class="text-danger small"
+               onclick="return confirm('Delete this notification?');">
+              <i class="bi bi-trash"></i>
+            </a>
+          {% endif %}
+        </div>
+        <div class="small-muted">
+          {{ log.member.get_full_name|default:log.member.username }} • {{ log.created_at|date:"M d, Y H:i" }}
+        </div>
+      </div>
+      <div class="text-end">
+        <div class="mb-2">
+          <span class="badge 
+            {% if log.notification_status == 'sent' %}bg-success
+            {% elif log.notification_status == 'failed' %}bg-danger
+            {% elif log.notification_status == 'pending' %}bg-warning text-dark
+            {% else %}bg-secondary{% endif %}">
+            {{ log.notification_status|title }}
+          </span>
+        </div>
+        {% if log.notification_status == 'failed' %}
+          <button class="btn btn-sm btn-outline-light js-resend-btn"
+                  data-resend-url="{% url 'notification:resend_notification' log.id %}">
+            Resend
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  {% empty %}
+    <div class="notif-card text-center small-muted">No delivery logs yet.</div>
+  {% endfor %}
+</div>
+
+<div class="d-flex justify-content-center mt-4">
+  <nav aria-label="Page navigation">
+    <ul class="pagination pagination-sm">
+      {% if logs.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ logs.previous_page_number }}&status={{ status_filter }}">Prev</a>
+        </li>
+      {% endif %}
+      <li class="page-item disabled">
+        <span class="page-link">{{ logs.number }} / {{ logs.paginator.num_pages }}</span>
+      </li>
+      {% if logs.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ logs.next_page_number }}&status={{ status_filter }}">Next</a>
+        </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/notification_logs.js' %}" defer></script>
+{% endblock %}

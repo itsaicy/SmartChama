@@ -1,0 +1,55 @@
+{% extends 'notification/notification_base.html' %}
+{% block title %}Notification Settings{% endblock %}
+{% block header_title %}Notification Settings{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center">
+  <form method="post" class="notif-card notif-centered" action="{% url 'notification:notification_settings' %}">
+    {% csrf_token %}
+    <div class="mb-4">
+      <h6 class="small-muted">Notification Channels</h6>
+    </div>
+
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+      <div>
+        <div class="fw-semibold">Receive Email</div>
+        <div class="small-muted">For account updates and newsletters</div>
+      </div>
+      <div>
+        <input type="checkbox" name="allow_email" id="allow_email"
+               {% if settings.user_notification_settings_allow_email %}checked{% endif %} />
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+      <div>
+        <div class="fw-semibold">Receive SMS</div>
+        <div class="small-muted">For important alerts</div>
+      </div>
+      <div>
+        <input type="checkbox" name="allow_sms" id="allow_sms"
+               {% if settings.user_notification_settings_allow_sms %}checked{% endif %} />
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+      <div>
+        <div class="fw-semibold">Receive In-App</div>
+        <div class="small-muted">Real-time updates</div>
+      </div>
+      <div>
+        <input type="checkbox" name="allow_inapp" id="allow_inapp"
+               {% if settings.user_notification_settings_allow_inapp %}checked{% endif %} />
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-end mt-4">
+      <button class="btn btn-warning text-dark fw-semibold" type="submit">Save</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

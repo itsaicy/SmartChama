@@ -26,15 +26,17 @@ class CustomUserManager(BaseUserManager):
 
         return self.create_user(user_email, password, **extra_fields)
 
+    def get_full_name(self):
+        return f"{self.user_first_name} {self.user_last_name}".strip()
+
+
 
 class User(AbstractUser):
-    username = None  # Disable Django's default username field
-
+    username = None  
     user_phone_regex = RegexValidator(
         regex=r'^\+\d{1,3}\d{9}$',
         message="Phone number must start with '+' followed by country code and 9 digits."
     )
-
     user_phone_number = models.CharField(
         max_length=13,
         validators=[user_phone_regex]

@@ -28,8 +28,9 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG')
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = [
+    '*'
+]
 
 # Application definition
 
@@ -45,13 +46,25 @@ INSTALLED_APPS = [
     'dashboard',
     'notification',
     'darajaapi',
+    'finance',
     'crispy_forms',
     'crispy_bootstrap5',
+    'django_extensions',
+    'django.contrib.humanize',
 ]
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 LOGIN_URL = 'login'
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler'},
+    },
+    'root': {'handlers': ['console'], 'level': 'INFO'},
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -163,7 +176,6 @@ if ENVIRONMENT == 'production' or POSTGRES_LOCALLY:
     EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
     DEFAULT_FROM_EMAIL = 'Chama'
     ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
-
     PASSWORD_RESET_TIMEOUT =14400
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
@@ -173,5 +185,7 @@ ACCOUNT_EMAIL_REQUIRED = True
 
 MPESA_CONSUMER_KEY = config('MPESA_CONSUMER_KEY')
 MPESA_CONSUMER_SECRET = config('MPESA_CONSUMER_SECRET')
+MPESA_PASSKEY = config('MPESA_PASSKEY')
+MPESA_SHORTCODE = config('MPESA_BUSINESSSHORTCODE')
 
 AUTH_USER_MODEL = 'user.User'

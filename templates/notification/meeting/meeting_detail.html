@@ -1,0 +1,43 @@
+{% extends "notification/meeting/meeting_base.html" %}
+{% block title %}Meeting Detail{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center">
+  <div class="card">
+    <h2 class="mb-4 text-center">{{ meeting.meeting_title }}</h2>
+
+    <p><strong>Date:</strong> {{ meeting.meeting_date|date:"D, d M Y H:i" }}</p>
+    <p><strong>Type:</strong> {{ meeting.meeting_type|capfirst }}</p>
+
+    {% if meeting.meeting_type == "physical" %}
+      <p><strong>Venue:</strong> {{ meeting.meeting_venue }}</p>
+    {% elif meeting.meeting_type == "online" %}
+      <p><strong>Link:</strong> <a href="{{ meeting.meeting_online_link }}" target="_blank">{{ meeting.meeting_online_link }}</a></p>
+    {% endif %}
+
+    <p><strong>Agenda:</strong></p>
+    <div class="agenda-box mb-3">
+      {{ meeting.meeting_agenda }}
+    </div>
+
+    <div class="mt-3">
+      {% if attendance %}
+        <p class="text-success text-center">
+          You have marked your attendance as <strong>{{ attendance.status|capfirst }}</strong>
+        </p>
+      {% else %}
+        <p class="text-center fw-semibold">Your confirmation is needed:</p>
+        <div class="d-flex justify-content-center gap-2">
+          <a href="{% url 'notification:confirm_attendance' meeting.pk 'present' %}" class="btn btn-sm filter-btn">Confirm Attendance</a>
+          <a href="{% url 'notification:confirm_attendance' meeting.pk 'absent' %}" class="btn btn-sm filter-btn">Decline Attendance</a>
+          <a href="{% url 'notification:confirm_attendance' meeting.pk 'excused' %}" class="btn btn-sm filter-btn">Excused</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="d-flex justify-content-center mt-4">
+      <a href="{% url 'notification:meeting_list' %}" class="btn btn-sm filter-btn">Back to Meetings</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

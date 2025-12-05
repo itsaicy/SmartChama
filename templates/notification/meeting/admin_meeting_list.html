@@ -1,0 +1,54 @@
+{% extends "notification/meeting/meeting_base.html" %}
+{% block title %}Manage Meetings{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center">
+  <div class="card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="mb-0">Manage Meetings</h2>
+      <a href="{% url 'notification:create_meeting' %}" class="btn filter-btn">+ Create Meeting</a>
+    </div>
+
+    <div class="d-flex justify-content-center gap-3 mb-3">
+      <a href="?filter=upcoming" class="btn btn-sm filter-btn">Upcoming</a>
+      <a href="?filter=completed" class="btn btn-sm filter-btn">Completed</a>
+    </div>
+
+    {% if meetings %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Date</th>
+            <th>Format</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for meeting in meetings %}
+          <tr>
+            <td>{{ meeting.meeting_title }}</td>
+            <td>{{ meeting.meeting_date|date:"D, d M Y H:i" }}</td>
+            <td>{{ meeting.meeting_type|capfirst }}</td>
+            <td>{{ meeting.meeting_status|capfirst }}</td>
+            <td>
+              <a href="{% url 'notification:meeting_attendance' meeting.pk %}" class="btn btn-sm filter-btn" title="View attendance">Attendance</a>
+              <a href="{% url 'notification:update_meeting' meeting.pk %}" class="btn btn-sm filter-btn" title="Edit meeting">Edit</a>
+              <form action="{% url 'notification:delete_meeting' meeting.pk %}" method="POST" class="d-inline delete-form">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm filter-btn" title="Delete meeting">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted text-center">No meetings scheduled.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
