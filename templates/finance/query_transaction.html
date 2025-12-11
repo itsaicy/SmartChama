@@ -1,0 +1,148 @@
+{% extends 'finance/finance_base.html' %}
+{% block page_title %}Query Transaction{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto; padding-top: 2rem;">
+    
+    <div style="margin-bottom: 2rem; background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <h4 style="margin-top:0; color:#333;">Check Transaction Status</h4>
+        <p style="color:#666; margin-bottom:1.5rem; font-size: 0.9rem;">
+            Enter the Checkout Request ID to verify the status.
+        </p>
+        
+        <div class="query-input-group" style="display:flex; gap:10px;">
+            <div class="input-wrapper" style="position:relative; flex-grow:1;">
+                <i class="fas fa-receipt" style="position:absolute; left:12px; top:12px; color:#999;"></i>
+                <input type="text" id="checkoutID" class="form-input" 
+                       placeholder="ws_CO_..." 
+                       value="{{ request.GET.ref|default:'' }}"
+                       style="width:100%; padding:10px 10px 10px 35px; border:1px solid #ddd; border-radius:6px;">
+            </div>
+            <button class="btn-finance" onclick="queryStatus()" style="padding:0 20px;">
+                <i class="fas fa-search"></i> Check
+            </button>
+        </div>
+    </div>
+
+    <div id="loadingState" style="display:none; text-align:center; padding: 2rem;">
+        <i class="fas fa-circle-notch fa-spin" style="font-size:2rem; color:var(--primary-green, #10B981);"></i>
+        <p style="color:#666; margin-top:10px;">Contacting M-Pesa...</p>
+    </div>
+
+    <div id="resultArea" style="display:none; animation: slideUp 0.3s ease-out;">
+        <div class="card" style="padding:0; overflow:hidden;">
+            <div style="padding: 1.5rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:#f9fafb;">
+                <span style="font-weight:700; color:#333;">Transaction Details</span>
+                <span id="resStatus" class="status-badge">Processing</span>
+            </div>
+
+            <div style="padding: 1.5rem;">
+                <div class="detail-row">
+                    <span class="detail-label">Payer Name</span>
+                    <span id="resName" class="detail-value" style="font-weight:bold;">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Amount</span>
+                    <span id="resAmount" class="detail-value">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Phone Number</span>
+                    <span id="resPhone" class="detail-value">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Date</span>
+                    <span id="resDate" class="detail-value">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Receipt No</span>
+                    <span id="resReceipt" class="detail-value">-</span>
+                </div>
+                
+                <hr style="margin: 1rem 0; border:0; border-top:1px dashed #eee;">
+                
+                <div class="detail-row">
+                    <span class="detail-label">Status Description</span>
+                    <span id="resDesc" class="detail-value" style="color:#666; font-style:italic;"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .detail-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.95rem; }
+    .detail-label { color: #6b7280; }
+    .detail-value { color: #111827; font-weight: 500; text-align: right; }
+    .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
+    .status-success { background: #d1fae5; color: #065f46; }
+    .status-failed { background: #fee2e2; color: #991b1b; }
+    @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+</style>
+
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+    const checkoutID = document.getElementById('checkoutID').value;
+    if (checkoutID && checkoutID.trim()) {
+        queryStatus();
+    }
+});
+
+function queryStatus() {
+    const id = document.getElementById('checkoutID').value.trim();
+    if(!id) return alert("Please enter a Checkout Request ID");
+    
+    // UI Reset
+    document.getElementById('resultArea').style.display = 'none';
+    document.getElementById('loadingState').style.display = 'block';
+
+    fetch(`/finance/stk/query/${id}/`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('resultArea').style.display = 'block';
+
+            const code = String(data.ResultCode); 
+            const desc = data.ResultDesc || data.ResponseDescription || "No description provided";
+
+            // 1. Populate Basic Fields from Local DB (Fallback)
+            // We use 'LocalAmount' if API data is missing
+            document.getElementById('resName').innerText = data.LocalPayerName || "Unknown";
+            document.getElementById('resAmount').innerText = "KES " + (data.LocalAmount || "-");
+            document.getElementById('resPhone').innerText = data.LocalPhone || "-";
+            document.getElementById('resDate').innerText = data.LocalDate || "-";
+            document.getElementById('resReceipt').innerText = data.LocalReceipt || "-";
+            document.getElementById('resDesc').innerText = desc;
+
+            // 2. Status Badge
+            const statusBadge = document.getElementById('resStatus');
+            if (code === "0") {
+                statusBadge.innerText = "Success";
+                statusBadge.className = "status-badge status-success";
+            } else {
+                statusBadge.innerText = "Failed / Pending";
+                statusBadge.className = "status-badge status-failed";
+            }
+
+            // 3. Metadata Overwrite (If API actually sends newer data)
+            if (data.CallbackMetadata && data.CallbackMetadata.Item) {
+                const items = data.CallbackMetadata.Item;
+                items.forEach(item => {
+                    if (item.Name === "Amount" && item.Value) {
+                        document.getElementById('resAmount').innerText = "KES " + item.Value;
+                    }
+                    if (item.Name === "MpesaReceiptNumber" && item.Value) {
+                        document.getElementById('resReceipt').innerText = item.Value;
+                    }
+                    if (item.Name === "PhoneNumber" && item.Value) {
+                        document.getElementById('resPhone').innerText = item.Value;
+                    }
+                });
+            }
+        })
+        .catch(err => {
+            document.getElementById('loadingState').style.display = 'none';
+            alert("Connection Error: " + err);
+        });
+}
+</script>
+{% endblock %}

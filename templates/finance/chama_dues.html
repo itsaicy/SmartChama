@@ -1,0 +1,93 @@
+{% extends 'finance/finance_base.html' %}
+{% load humanize %}
+
+{% block page_title %}Chama Outstanding Dues{% endblock %}
+
+{% block content %}
+
+<div class="card" style="text-align: center; padding: 2.5rem 1rem; border-left: none; margin-bottom: 2rem;">
+    <p class="stat-label" style="font-size: 1rem; color: #666; margin-bottom: 0.5rem;">Total Collectables</p>
+    <h1 style="font-size: 3rem; font-weight: 800; color: var(--primary-black); margin: 0;">
+        KES {{ total_owed|floatformat:2|intcomma }}
+    </h1>
+    <p style="font-size: 0.9rem; color: #999; margin-top: 5px;">Total value of all active debts in the Chama.</p>
+</div>
+
+<div class="filter-scroll">
+    <div class="filter-chip active" onclick="filterList('all')">All</div>
+    <div class="filter-chip" onclick="filterList('loan')">Loans</div>
+    <div class="filter-chip" onclick="filterList('penalty')">Penalties</div>
+</div>
+
+<div id="duesList" style="padding-bottom: 80px;">
+    
+    {% for loan in loans %}
+    <div class="card list-item" data-type="loan" style="display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #0284c7;">
+        <div class="item-left">
+            <div class="icon-box" style="background: #e0f2fe; color: #0284c7;">
+                <i class="fas fa-user"></i>
+            </div>
+            <div>
+                <div class="item-main" style="font-weight: 700;">{{ loan.loan_user.get_full_name }}</div>
+                <div class="item-sub">
+                    Loan Balance • Due {{ loan.loan_deadline|date:"M d" }}
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: right;">
+            <div class="item-amount" style="margin-bottom: 5px;">KES {{ loan.loan_outstanding_balance|floatformat:0|intcomma }}</div>
+            
+            <a href="{% url 'finance:remind_member_debt' loan.loan_user.id %}" class="status-badge" style="background: #f3f4f6; color: #4b5563; text-decoration: none; border: 1px solid #e5e7eb; cursor: pointer;">
+                <i class="fas fa-bell" style="font-size: 0.8rem;"></i> Remind
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% for p in penalties %}
+    <div class="card list-item" data-type="penalty" style="display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #ef4444;">
+        <div class="item-left">
+            <div class="icon-box icon-warn">
+                <i class="fas fa-user"></i>
+            </div>
+            <div>
+                <div class="item-main" style="font-weight: 700;">{{ p.penalty_user.get_full_name }}</div>
+                <div class="item-sub">
+                    {{ p.penalty_reason }} • {{ p.penalty_created_at|date:"M d" }}
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: right;">
+            <div class="item-amount" style="color: var(--danger); margin-bottom: 5px;">KES {{ p.penalty_amount|floatformat:0|intcomma }}</div>
+            
+            <a href="{% url 'finance:remind_member_debt' p.penalty_user.id %}" class="status-badge" style="background: #fee2e2; color: #b91c1c; text-decoration: none; cursor: pointer;">
+                <i class="fas fa-bell" style="font-size: 0.8rem;"></i> Remind
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if not loans and not penalties %}
+    <div style="text-align: center; padding: 3rem; color: #666;">
+        <i class="fas fa-check-circle" style="font-size: 3rem; color: #10B981; margin-bottom: 1rem;"></i>
+        <p>No outstanding debts in the Chama.</p>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+    function filterList(type) {
+        const items = document.querySelectorAll('.list-item');
+        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+        event.target.classList.add('active');
+        items.forEach(item => {
+            if (type === 'all' || item.getAttribute('data-type') === type) item.style.display = 'flex';
+            else item.style.display = 'none';
+        });
+    }
+</script>
+
+{% endblock %}

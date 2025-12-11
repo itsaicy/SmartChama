@@ -1,15 +1,31 @@
-{% load static%}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" 
-    rel="stylesheet"/> <!-- Font Awesome -->
-    <link rel="stylesheet" href="{% static 'css/styles.css'%}"> <!--CSS-->
+    <title>SmartChama</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/> 
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body>
+
+<div id="message-container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            Please correct the errors below.
+        </div>
+    {% endif %}
+</div>
+
 <div class="wrapper">
     <nav class="nav">
         <div class="nav-logo">
@@ -17,33 +33,57 @@
         </div>
         <div class="nav-menu">
             <ul>
-                <li><a href="#" class="link active">Home</a></li>
+                <li><a href="{% url 'home' %}" class="link">Home</a></li>
                 <li><a href="#" class="link">About</a></li>
                 <li><a href="#" class="link">Contact Us</a></li>
             </ul>
         </div>
         <div class="nav-button">
-            <button class="btn white-btn" id="loginBtn"><a href="{% url 'login' %}"></a>Login</button>
-            <button class="btn" id="signupBtn"><a href="{% url 'signup' %}"></a>SignUp</button>
+            <button class="btn white-btn" id="loginBtn">Login</button>
+            <button class="btn" id="signupBtn">SignUp</button>
         </div>
         <div class="nav-menu-btn">
             <i class="fa-solid fa-bars"></i>
         </div>
     </nav>
 </div>
-<!--Unique content goes here-->
+
 <main>
     {% block content %} 
     {% endblock content %}
 </main>
 
 <script>
-document.getElementById('loginBtn').onclick = function() {
-    window.location.href = "{% url 'login' %}";
-};
-document.getElementById('signupBtn').onclick = function() {
-    window.location.href = "{% url 'signup' %}";
-};
+    // Navigation Buttons
+    const loginBtn = document.getElementById('loginBtn');
+    const signupBtn = document.getElementById('signupBtn');
+
+    if(loginBtn) {
+        loginBtn.onclick = function() { window.location.href = "{% url 'login' %}"; };
+    }
+    if(signupBtn) {
+        signupBtn.onclick = function() { window.location.href = "{% url 'signup' %}"; };
+    }
+
+    // --- MESSAGE TIMEOUT LOGIC ---
+    // Wait for DOM to load
+    document.addEventListener("DOMContentLoaded", function() {
+        const alerts = document.querySelectorAll('.alert');
+        
+        alerts.forEach(function(alert) {
+            // Set timeout for 3 seconds (3000ms)
+            setTimeout(function() {
+                // Fade out effect
+                alert.style.transition = "opacity 0.5s ease";
+                alert.style.opacity = "0";
+                
+                // Remove from DOM after fade out completes
+                setTimeout(function() {
+                    alert.remove();
+                }, 500); 
+            }, 3000);
+        });
+    });
 </script>
 </body>
 </html>

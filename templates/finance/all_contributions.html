@@ -1,0 +1,83 @@
+{% extends 'finance/finance_base.html' %}
+{% block page_title %}Chama Ledger (All){% endblock %}
+
+{% block content %}
+
+<div style="padding: 10px 15px;">
+    <a href="{% url 'dashboard:admin_dashboard' chama.id %}" style="text-decoration: none; color: var(--text-grey); font-size: 0.9rem;">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="filter-scroll">
+    <div class="filter-chip active" onclick="filterList('all')">All</div>
+    <div class="filter-chip" onclick="filterList('contribution')">Contributions</div>
+    <div class="filter-chip" onclick="filterList('loan_repayment')">Loan Repayments</div>
+    <div class="filter-chip" onclick="filterList('penalty')">Penalties</div>
+</div>
+
+<div id="transactionList" style="padding-bottom: 80px;">
+
+    {% for c in contributions %}
+    <div class="transaction-card list-item" data-type="{{ c.contribution_type }}" style="border-left: 4px solid var(--primary-green);">
+        
+        <div class="item-left">
+            {% if c.contribution_status == 'failed' %}
+                <div class="icon-box icon-fail"><i class="fas fa-exclamation-triangle"></i></div>
+            {% elif c.contribution_type == 'contribution' %}
+                <div class="icon-box icon-in"><i class="fas fa-arrow-up"></i></div>
+            {% elif c.contribution_type == 'loan_repayment' %}
+                <div class="icon-box icon-out"><i class="fas fa-arrow-down"></i></div>
+            {% elif c.contribution_type == 'penalty' %}
+                <div class="icon-box icon-warn"><i class="fas fa-gavel"></i></div>
+            {% else %}
+                <div class="icon-box icon-in"><i class="fas fa-exchange-alt"></i></div>
+            {% endif %}
+
+            <div>
+                <div class="item-main" style="font-weight: 700; font-size: 1rem;">
+                    {{ c.contribution_user.user_first_name }} {{ c.contribution_user.user_last_name }}
+                </div>
+                
+                <div class="item-sub">
+                    {{ c.get_contribution_type_display }} • {{ c.contribution_created_at|date:"d M, h:i A" }} 
+                </div>
+                
+                <div style="display:flex; align-items:center; gap: 10px; margin-top:6px;">
+                    {% if c.contribution_status == 'success' %}
+                        <span class="status-badge status-success">Success</span>
+                    {% elif c.contribution_status == 'pending' %}
+                        <span class="status-badge status-pending">Pending</span>
+                    {% else %}
+                        <span class="status-badge status-failed">Failed</span>
+                    {% endif %}
+
+                    {% if c.contribution_reference %}
+                        <a href="{% url 'finance:query_transaction_page' %}?ref={{ c.contribution_reference }}" 
+                           style="font-size: 0.8rem; font-weight: 600; color: var(--primary-green); text-decoration: none;">
+                            View Receipt
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="item-amount" style="text-align: right;">
+            <div style="font-weight: bold; color: var(--text-dark);">KES {{ c.contribution_amount|floatformat:2 }}</div>
+            {% if c.contribution_reference %}
+                <div style="font-size: 0.7rem; color: #aaa; font-family: monospace;">
+                    {{ c.contribution_reference|slice:":8"|upper }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+        <div style="text-align:center; padding:4rem 1rem; color:#64748b;">
+            <i class="fas fa-folder-open" style="font-size: 3rem; margin-bottom: 1rem; opacity:0.3;"></i>
+            <p>No transactions found.</p>
+        </div>
+    {% endfor %}
+
+</div>
+
+{% endblock %}

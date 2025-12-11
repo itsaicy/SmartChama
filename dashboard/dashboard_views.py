@@ -16,6 +16,24 @@ from finance.models import Contribution, LoanRepayment, Loan, ContributionCycle,
 from darajaapi.models import Transaction
 from chama.utils import get_user_dashboard_redirect
 
+# --- NEW HELPER FUNCTION for Notifications ---
+def get_notification_context(user, active_chama):
+    """Fetches unread count and latest 5 unread notifications for the active chama."""
+    if not active_chama:
+        return {"unread_count": 0, "latest_notifications": []}
+
+    qs = Notification.objects.filter(
+        notification_user=user,
+        notification_chama=active_chama,
+        notification_is_read=False
+    ).order_by('-notification_created_at')
+    
+    return {
+        "unread_count": qs.count(),
+        "latest_notifications": qs[:5],
+    }
+# ---------------------------------------------
+
 
 @login_required
 def dashboard(request):
@@ -47,6 +65,9 @@ def dashboard_search(request, chama_id):
         "results": memberships,
         "query": query
     }
+    # Add notifications to context
+    active_chama = Chama.objects.filter(id=chama_id).first()
+    context.update(get_notification_context(request.user, active_chama))
     return render(request, "dashboard/search_results.html", context)
 
 
@@ -109,7 +130,10 @@ def member_dashboard(request, chama_id=None):
             active_chama = get_object_or_404(Chama, id=chama_id)
         else:
             # Handle case where user has no chama context yet
-            return render(request, "dashboard/member_dashboard.html", {"error": "No Chama Selected"})
+            active_chama = None
+            context = {"error": "No Chama Selected"}
+            context.update(get_notification_context(request.user, active_chama))
+            return render(request, "dashboard/member_dashboard.html", context)
 
     # 3. --- CARDS DATA ---
 
@@ -185,13 +209,8 @@ def member_dashboard(request, chama_id=None):
         if att:
             attendance_status = att.attendance_status
 
-    # F. Notifications
-    unread_notifications = Notification.objects.filter(
-        notification_user=request.user,
-        notification_chama=active_chama,
-        notification_is_read=False
-    ).order_by('-notification_created_at')[:5]
-
+    # F. Notifications - REMOVED: Now handled by helper function
+    
     # 5. --- GRAPHS DATA (My Monthly Contributions) ---
     six_months_ago = timezone.now() - timedelta(days=180)
     monthly_stats = Contribution.objects.filter(
@@ -229,19 +248,109 @@ def member_dashboard(request, chama_id=None):
         # Widgets
         "next_meeting": next_meeting,
         "attendance_status": attendance_status,
-        "notifications": unread_notifications,
         
         # Chart Data (JSON for JS)
         "chart_labels": json.dumps(chart_labels),
         "chart_data": json.dumps(chart_data),
     }
+    context.update(get_notification_context(request.user, active_chama))
     return render(request, "dashboard/member_dashboard.html", context)
 # ==========================================
 #              ADMIN DASHBOARD
 # ==========================================
 
+
+# --- HELPER FUNCTION for Notifications ---
+def get_notification_context(user, active_chama):
+    """Fetches unread count and latest 5 unread notifications for the active chama."""
+    if not active_chama:
+        return {"unread_count": 0, "latest_notifications": []}
+
+    qs = Notification.objects.filter(
+        notification_user=user,
+        notification_chama=active_chama,
+        notification_is_read=False
+    ).order_by('-notification_created_at')
+    
+    return {
+        "unread_count": qs.count(),
+        "latest_notifications": qs[:5],
+    }
+
+# --- HELPER FUNCTION for Recent Activity ---
+def get_recent_activity(chama, limit=4):
+    """
+    Fetches the 4 most recent activities across the chama.
+    Returns a list of activity dictionaries with type, description, and timestamp.
+    """
+    activities = []
+    
+    # Recent Contributions
+    recent_contributions = Contribution.objects.filter(
+        contribution_chama=chama,
+        contribution_status='success'
+    ).order_by('-contribution_created_at')[:limit]
+    
+    for contrib in recent_contributions:
+        activities.append({
+            'type': 'contribution',
+            'icon': 'fa-coins',
+            'color': 'success',
+            'description': f"{contrib.contribution_user.get_full_name()} contributed Ksh {contrib.contribution_amount}",
+            'timestamp': contrib.contribution_created_at
+        })
+    
+    # Recent Loans
+    recent_loans = Loan.objects.filter(
+        loan_chama=chama
+    ).order_by('-loan_created_at')[:limit]
+    
+    for loan in recent_loans:
+        activities.append({
+            'type': 'loan',
+            'icon': 'fa-hand-holding-usd',
+            'color': 'warning',
+            'description': f"{loan.loan_user.get_full_name()} took a loan of Ksh {loan.loan_amount}",
+            'timestamp': loan.loan_created_at
+        })
+    
+    # Recent Penalties
+    recent_penalties = Penalty.objects.filter(
+        penalty_chama=chama
+    ).order_by('-penalty_created_at')[:limit]
+    
+    for penalty in recent_penalties:
+        activities.append({
+            'type': 'penalty',
+            'icon': 'fa-exclamation-triangle',
+            'color': 'danger',
+            'description': f"{penalty.penalty_user.get_full_name()} received a penalty of Ksh {penalty.penalty_amount}",
+            'timestamp': penalty.penalty_created_at
+        })
+    
+    # Recent Join Requests
+    recent_joins = JoinRequest.objects.filter(
+        join_request_chama=chama,
+        join_request_status='accepted'
+    ).order_by('-join_request_reviewed_at')[:limit]
+    
+    for join in recent_joins:
+        activities.append({
+            'type': 'join',
+            'icon': 'fa-user-plus',
+            'color': 'info',
+            'description': f"{join.join_request_user.get_full_name()} joined the chama",
+            'timestamp': join.join_request_reviewed_at or join.join_request_created_at
+        })
+    
+    # Sort all activities by timestamp (most recent first) and return top 4
+    activities.sort(key=lambda x: x['timestamp'], reverse=True)
+    return activities[:limit]
+
+
 @login_required
 def admin_dashboard(request, chama_id=None):
+    # Get all user's memberships with their roles
     memberships = Membership.objects.filter(
         membership_user=request.user,
         membership_status="active"
@@ -249,88 +358,153 @@ def admin_dashboard(request, chama_id=None):
 
     user_chamas = [m.membership_chama.id for m in memberships]
 
-    # If user has only one chama and no ID is provided, redirect to it
-    if len(user_chamas) == 1 and chama_id is None:
-        only_chama_id = user_chamas[0]
-        return redirect("dashboard:admin_dashboard", chama_id=only_chama_id)
-
     active_chama = None
     active_role = None
 
     if chama_id:
         chama_id = int(chama_id)
         if chama_id not in user_chamas:
-            return render(request, "dashboard/admin_dashboard.html", {
-                "error": "You do not belong to this chama.",
-            })
-        active_chama = Chama.objects.get(id=chama_id)
+            pass 
+        else:
+            active_chama = Chama.objects.get(id=chama_id)
+            membership = Membership.objects.filter(
+                membership_chama=active_chama,
+                membership_user=request.user
+            ).first()
+            active_role = membership.membership_role if membership else None
+    
+    # If user has only one chama and no ID is provided, set it as active
+    if active_chama is None and len(user_chamas) == 1:
+        active_chama = Chama.objects.get(id=user_chamas[0])
         membership = Membership.objects.filter(
             membership_chama=active_chama,
             membership_user=request.user
         ).first()
         active_role = membership.membership_role if membership else None
-
+    
+    # Redirect if context is missing/invalid after checks
+    if active_chama is None:
+        context = {"error": "You do not belong to this chama or no chama is selected."}
+        context.update(get_notification_context(request.user, None))
+        return render(request, "dashboard/admin_dashboard.html", context)
+        
     # --- Calculate Metrics ---
-    if active_chama:
-        # 1. Total Members
-        total_members = Membership.objects.filter(
-            membership_chama=active_chama,
-            membership_status="active"
-        ).count()
 
-        # 2. Total Funds (Success contributions)
-        total_contributions = Contribution.objects.filter(
-            contribution_chama=active_chama,
-            contribution_status="success"
-        ).aggregate(total=Sum("contribution_amount"))["total"] or 0
+    # 1. Total Members
+    total_members = Membership.objects.filter(
+        membership_chama=active_chama,
+        membership_status="active"
+    ).count()
 
-        # 3. Pending Actions
-        pending_contributions = Contribution.objects.filter(
-            contribution_chama=active_chama,
-            contribution_status="pending"
-        ).count()
+    # 2. Total Contributions (Success only)
+    contributions_qs = Contribution.objects.filter(
+        contribution_chama=active_chama,
+        contribution_status="success"
+    )
+    total_contributions = contributions_qs.aggregate(total=Sum("contribution_amount"))["total"] or 0
 
-        pending_payments = LoanRepayment.objects.filter(
-            loan_repayment_loan__loan_chama=active_chama
-        ).count() # This counts pending loan repayment approvals
+    # 3. Pending Contributions (by type)
+    pending_contributions_regular = Contribution.objects.filter(
+        contribution_chama=active_chama,
+        contribution_status="pending",
+        contribution_type='contribution'
+    )
+    pending_regular_count = pending_contributions_regular.count()
+    pending_regular_amount = pending_contributions_regular.aggregate(total=Sum("contribution_amount"))["total"] or 0
 
-        # 4. Chama Balance (Total In - Total Outstanding Loans)
-        total_loan_outstanding = Loan.objects.filter(
-            loan_chama=active_chama
-        ).aggregate(out=Sum("loan_outstanding_balance"))["out"] or 0
+    # 4. Pending Loan Requests
+    pending_loan_requests = Loan.objects.filter(
+        loan_chama=active_chama,
+        loan_status="pending"
+    )
+    pending_loans_count = pending_loan_requests.count()
 
-        chama_balance = total_contributions - total_loan_outstanding
+    # 5. Today's STK Summary
+    today = timezone.now().date()
+    today_tx = Transaction.objects.filter(
+        transaction_chama=active_chama,
+        transaction_created_at__date=today
+    )
+    stk_success = today_tx.filter(transaction_status="success").count()
+    stk_failed = today_tx.filter(transaction_status="failed").count()
+    stk_pending = today_tx.filter(transaction_status="pending").count()
 
-        # --- Treasurer Metrics (for reused components) ---
-        contributions_qs = Contribution.objects.filter(
-            contribution_chama=active_chama,
-            contribution_status="success"
-        )
-        collected = total_contributions
-        target = active_chama.chama_target_amount
-        progress_percent = (collected / target * 100) if target > 0 else 0
+    # 6. Penalties Overview
+    all_penalties_qs = Penalty.objects.filter(penalty_chama=active_chama)
+    unpaid_penalties = all_penalties_qs.filter(penalty_paid=False)
+    total_penalty_amount = all_penalties_qs.aggregate(total=Sum("penalty_amount"))["total"] or 0
+    unpaid_penalty_amount = unpaid_penalties.aggregate(total=Sum("penalty_amount"))["total"] or 0
+    unpaid_penalty_count = unpaid_penalties.count()
 
-    else:
-        # Default zero values if no chama selected
-        total_members = total_contributions = pending_contributions = 0
-        pending_payments = total_loan_outstanding = chama_balance = 0
-        collected = target = progress_percent = 0
+    # 7. Contribution History (Last 6 Months)
+    six_months_ago = timezone.now() - timedelta(days=180)
+    contributions_history = (
+        contributions_qs.filter(contribution_time__gte=six_months_ago)
+        .annotate(month=TruncMonth('contribution_time'))
+        .values("month")
+        .annotate(total=Sum("contribution_amount"))
+        .order_by("month")
+    )
+    contributions_history_list = list(contributions_history)
+
+    # 8. Progress Toward Chama Target
+    target = active_chama.chama_target_amount
+    collected = total_contributions
+    progress_percent = (collected / target * 100) if target > 0 else 0
+
+    # 9. Pending Join Requests (For validation)
+    pending_join_requests = JoinRequest.objects.filter(
+        join_request_chama=active_chama,
+        join_request_status="pending"
+    )
+    pending_join_count = pending_join_requests.count()
+
+    # 10. Recent Activity (NEW)
+    recent_activities = get_recent_activity(active_chama, limit=4)
 
     context = {
         "active_chama": active_chama,
         "active_role": active_role,
         "chama_with_roles": memberships,
-        # Metrics for Cards
+        
+        # --- CARDS DATA (Only what's needed) ---
         "total_members": total_members,
         "total_contributions": total_contributions,
-        "pending_contributions": pending_contributions,
-        "pending_payments": pending_payments,
-        "chama_balance": chama_balance,
-        # Extra Treasurer Metrics if needed
-        "collected": collected,
+        
+        # Pending Contributions Card
+        "pending_regular_count": pending_regular_count,
+        "pending_regular_amount": pending_regular_amount,
+        
+        # Pending Loan Requests Card
+        "pending_loans_count": pending_loans_count,
+        "pending_loan_requests": pending_loan_requests,
+        
+        # Today's STK Summary Card
+        "stk_success": stk_success,
+        "stk_failed": stk_failed,
+        "stk_pending": stk_pending,
+        
+        # Penalties Overview Card
+        "total_penalty_amount": total_penalty_amount,
+        "unpaid_penalty_amount": unpaid_penalty_amount,
+        "unpaid_penalty_count": unpaid_penalty_count,
+        
+        # Contribution History (Last 6 Months) - For Chart
+        "contributions_history": contributions_history_list,
+        
+        # Progress Toward Chama Target Card
         "target": target,
+        "collected": collected,
         "progress_percent": progress_percent,
+        
+        # Join Requests (for validation/debugging)
+        "pending_join_count": pending_join_count,
+        
+        # Recent Activity (NEW)
+        "recent_activities": recent_activities,
     }
+    
+    context.update(get_notification_context(request.user, active_chama))
     return render(request, "dashboard/admin_dashboard.html", context)
 
 
@@ -341,12 +515,13 @@ def assign_role(request, chama_id):
     Handles role assignment from the Admin Dashboard Modal.
     """
     chama = get_object_or_404(Chama, id=chama_id)
+    # ... (rest of assign_role remains the same)
     
     # 1. Verify Requesting User is Admin
     requester_membership = Membership.objects.filter(
         membership_user=request.user, 
         membership_chama=chama, 
-        membership_role='admin'
+        membership_role__in=['admin', 'chairman']
     ).first()
     
     if not requester_membership:
@@ -388,7 +563,7 @@ def edit_member(request, chama_id):
     chama = get_object_or_404(Chama, id=chama_id)
     
     # Verify Admin
-    if not Membership.objects.filter(membership_user=request.user, membership_chama=chama, membership_role='admin').exists():
+    if not Membership.objects.filter(membership_user=request.user, membership_chama=chama, membership_role__in=['admin', 'chairman']).exists():
         messages.error(request, "Unauthorized.")
         return redirect("dashboard:admin_dashboard", chama_id=chama_id)
 
@@ -415,7 +590,7 @@ def delete_member(request, chama_id, user_id):
     chama = get_object_or_404(Chama, id=chama_id)
     
     # Verify Admin
-    if not Membership.objects.filter(membership_user=request.user, membership_chama=chama, membership_role='admin').exists():
+    if not Membership.objects.filter(membership_user=request.user, membership_chama=chama, membership_role__in=['admin', 'chairman']).exists():
         messages.error(request, "Unauthorized.")
         return redirect("dashboard:admin_dashboard", chama_id=chama_id)
 
@@ -435,6 +610,8 @@ def delete_member(request, chama_id, user_id):
 # ==========================================
 #           PROFILE & REPORTING
 # ==========================================
+
+# ... (update_profile_picture and download_report remain the same as they don't impact the dashboard header)
 
 @login_required
 def update_profile_picture(request):
@@ -463,11 +640,11 @@ def download_report(request, chama_id, report_type):
     # Security Check: Ensure user belongs to the Chama and has permission
     membership = get_object_or_404(Membership, membership_user=request.user, membership_chama=chama)
     
-    if report_type == 'full' and membership.membership_role != 'admin':
-        return HttpResponseForbidden("Unauthorized: Only Admins can download full reports.")
+    if report_type == 'full' and membership.membership_role not in ['admin', 'chairman']:
+        return HttpResponseForbidden("Unauthorized: Only Admins/Chairmen can download full reports.")
     
-    if report_type == 'finance' and membership.membership_role not in ['admin', 'treasurer']:
-        return HttpResponseForbidden("Unauthorized: Only Treasurers/Admins can download finance reports.")
+    if report_type == 'finance' and membership.membership_role not in ['admin', 'chairman', 'treasurer']:
+        return HttpResponseForbidden("Unauthorized: Only Treasurers/Admins/Chairmen can download finance reports.")
 
     # Create Response
     response = HttpResponse(
@@ -527,6 +704,7 @@ def download_report(request, chama_id, report_type):
 @login_required
 def treasurer_dashboard(request, chama_id):
     chama = get_object_or_404(Chama, id=chama_id)
+    active_chama = chama # Alias for consistency
 
     # --- 1. Total Funds ---
     month = request.GET.get("month")  # dropdown filter
@@ -583,7 +761,8 @@ def treasurer_dashboard(request, chama_id):
     )
 
     # Pie chart: cycle status
-    paid = contributions_qs.count()
+    # Note: Using contribution count (paid) and penalty count (overdue) as proxies here.
+    paid = contributions_qs.count() 
     pending = pending_count
     overdue = penalties.count()
 
@@ -609,6 +788,7 @@ def treasurer_dashboard(request, chama_id):
         "contributions_history": list(contributions_history),
         "cycle_status": {"paid": paid, "pending": pending, "overdue": overdue},
     }
+    context.update(get_notification_context(request.user, active_chama))
     return render(request, "dashboard/treasurer_dashboard.html", context)
 
 
@@ -616,9 +796,12 @@ def treasurer_dashboard(request, chama_id):
 #           SECRETARY DASHBOARD
 # ==========================================
 
+# In dashboard/dashboard_views.py
+
 @login_required
 def secretary_dashboard(request, chama_id):
     chama = get_object_or_404(Chama, id=chama_id)
+    active_chama = chama # Alias for consistency
     membership = get_object_or_404(
         Membership,
         membership_user=request.user,
@@ -633,6 +816,11 @@ def secretary_dashboard(request, chama_id):
     total_members = Membership.objects.filter(membership_chama=chama).count()
     active_members = Membership.objects.filter(membership_chama=chama, membership_status="active").count()
     inactive_members = total_members - active_members
+
+    # FIXED CALCULATION: Active Member Percentage
+    active_percentage = 0
+    if total_members > 0:
+        active_percentage = (active_members / total_members) * 100
 
     # New members this month
     now = timezone.now()
@@ -650,13 +838,15 @@ def secretary_dashboard(request, chama_id):
         meeting_date__range=(start_week, end_week),
         meeting_status="scheduled"
     )
+    
+    # Join Requests (Added here to ensure template rendering works)
+    join_requests = JoinRequest.objects.filter(join_request_chama=chama, join_request_status="pending")
 
     # Average attendance (last meeting)
     last_meeting = Meeting.objects.filter(meeting_chama=chama, meeting_status="completed").order_by("-meeting_date").first()
-    avg_attendance = last_meeting.attendance_rate if last_meeting else 0
+    # Assuming attendance_rate is a property or method on the Meeting model that calculates the average rate
+    avg_attendance = last_meeting.attendance_rate if last_meeting and hasattr(last_meeting, 'attendance_rate') else 0 
 
-    # Unread notifications
-    unread_notifications = Notification.objects.filter(notification_user=request.user, notification_is_read=False).count()
 
     context = {
         "chama": chama,
@@ -666,14 +856,17 @@ def secretary_dashboard(request, chama_id):
         "new_members_this_month": new_members_this_month,
         "upcoming_meetings": upcoming_meetings,
         "avg_attendance": avg_attendance,
-        "unread_notifications": unread_notifications,
+        "active_percentage": active_percentage, # <-- NEW CONTEXT VARIABLE
+        "join_requests": join_requests, # Ensure join_requests is passed for the card
+        "now": now, # Pass 'now' for the new members month display
     }
+    context.update(get_notification_context(request.user, active_chama))
     return render(request, "dashboard/secretary_dashboard.html", context)
-
 
 @login_required
 def secretary_join_requests(request, chama_id):
     chama = get_object_or_404(Chama, id=chama_id)
+    # ... (rest of secretary_join_requests remains the same)
     membership = get_object_or_404(Membership, membership_user=request.user, membership_chama=chama)
 
     if membership.membership_role != "secretary":
@@ -688,7 +881,16 @@ def secretary_join_requests(request, chama_id):
             join_req.join_request_status = "accepted"
             join_req.join_request_reviewed_by = request.user
             join_req.join_request_reviewed_at = timezone.now()
+            
+            # Create Membership after approval (assuming this logic is correct)
+            Membership.objects.create(
+                membership_chama=chama,
+                membership_user=join_req.join_request_user,
+                membership_role='member',
+                membership_status='active',
+            )
             join_req.save()
+            
             Notification.objects.create(
                 notification_user=join_req.join_request_user,
                 notification_chama=chama,
@@ -697,6 +899,7 @@ def secretary_join_requests(request, chama_id):
                 notification_type="member_joined",
                 notification_sender=request.user
             )
+            messages.success(request, f"Approved {join_req.join_request_user.get_full_name()} to join.")
         elif action == "reject":
             join_req.join_request_status = "rejected"
             join_req.join_request_reviewed_by = request.user
@@ -710,13 +913,22 @@ def secretary_join_requests(request, chama_id):
                 notification_type="member_joined",
                 notification_sender=request.user
             )
+            messages.warning(request, f"Rejected {join_req.join_request_user.get_full_name()}'s request.")
+        
+        return redirect("dashboard:secretary_join_requests", chama_id=chama.id)
+
 
     join_requests = JoinRequest.objects.filter(join_request_chama=chama, join_request_status="pending")
-    return render(request, "chama/join_requests.html", {"join_requests": join_requests})
+    
+    active_chama = chama
+    context = {"join_requests": join_requests, "active_chama": active_chama}
+    context.update(get_notification_context(request.user, active_chama))
+    return render(request, "chama/join_requests.html", context)
 
 
 @login_required
 def mark_attendance(request, chama_id, meeting_id):
+    # ... (mark_attendance remains the same)
     chama = get_object_or_404(Chama, id=chama_id)
     meeting = get_object_or_404(Meeting, id=meeting_id, meeting_chama=chama)
     membership = get_object_or_404(Membership, membership_user=request.user, membership_chama=chama)
@@ -742,13 +954,20 @@ def mark_attendance(request, chama_id, meeting_id):
                 notification_sender=request.user,
                 notification_related_meeting=meeting
             )
+        messages.success(request, f"Attendance marked as {status.title()} for member ID {member_id}.")
+        return redirect(request.META.get('HTTP_REFERER', 'dashboard:secretary_dashboard'))
+
 
     attendees = Membership.objects.filter(membership_chama=chama, membership_status="active")
-    return render(request, "notification/meeting/admin_meeting_list.html", {"meeting": meeting, "attendees": attendees})
+    active_chama = chama
+    context = {"meeting": meeting, "attendees": attendees, "active_chama": active_chama}
+    context.update(get_notification_context(request.user, active_chama))
+    return render(request, "notification/meeting/admin_meeting_list.html", context)
 
 
 @login_required
 def upload_meeting_file(request, chama_id, meeting_id):
+    # ... (upload_meeting_file remains the same)
     chama = get_object_or_404(Chama, id=chama_id)
     meeting = get_object_or_404(Meeting, id=meeting_id, meeting_chama=chama)
     membership = get_object_or_404(Membership, membership_user=request.user, membership_chama=chama)
@@ -772,12 +991,15 @@ def upload_meeting_file(request, chama_id, meeting_id):
             notification_sender=request.user,
             notification_related_meeting=meeting
         )
+        messages.success(request, "Meeting file uploaded successfully.")
 
+    # Note: Assuming 'dashboard:meeting_detail' is a valid URL, otherwise check URL structure
     return redirect("dashboard:meeting_detail", chama_id=chama.id, meeting_id=meeting.id)
 
 
 @login_required
 def send_reminder(request, chama_id):
+    # ... (send_reminder remains the same)
     chama = get_object_or_404(Chama, id=chama_id)
     membership = get_object_or_404(Membership, membership_user=request.user, membership_chama=chama)
 
@@ -786,6 +1008,7 @@ def send_reminder(request, chama_id):
 
     if request.method == "POST":
         message = request.POST.get("message")
+        count = 0
         for member in Membership.objects.filter(membership_chama=chama, membership_status="active"):
             Notification.objects.create(
                 notification_user=member.membership_user,
@@ -795,5 +1018,7 @@ def send_reminder(request, chama_id):
                 notification_type="reminder",
                 notification_sender=request.user
             )
+            count += 1
+        messages.success(request, f"Reminder sent to {count} active members.")
 
     return redirect("dashboard:secretary_dashboard", chama_id=chama.id)

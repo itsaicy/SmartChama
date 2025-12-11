@@ -1,0 +1,266 @@
+{% extends 'chama/chama_base.html' %}
+{% load static %}
+
+{% block title %}Manage Members - {{ chama.chama_name }}{% endblock %}
+
+{% block content %}
+<div class="manage-members-container">
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="page-header">
+        <h1 class="page-title">Manage Members - {{ chama.chama_name }}</h1>
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="openAddMemberModal()">
+                <span>➕</span> Add Member
+            </button>
+            <a href="{% url 'chama:chama_detail' chama.pk %}" class="btn btn-outline">Back to Chama</a>
+        </div>
+    </div>
+
+    <div class="chamas-table-wrapper">
+        <table class="table chama-table">
+            <thead>
+                <tr>
+                    <th class="chama-th">Profile</th>
+                    <th class="chama-th">Name</th>
+                    <th class="chama-th">Email</th>
+                    <th class="chama-th">Role</th>
+                    <th class="chama-th">Contribution</th>
+                    <th class="chama-th">Status</th>
+                    <th class="chama-th">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in members %}
+                <tr class="chama-row">
+                    <td>
+                        {% if member.membership_user.user_profile_picture %}
+                        <img src="{{ member.membership_user.user_profile_picture.url }}" 
+                             alt="{{ member.membership_user.get_full_name }}" 
+                             class="member-profile-pic">
+                        {% else %}
+                        <div class="member-avatar-placeholder">
+                            {{ member.membership_user.user_first_name|slice:":1"|upper }}{{ member.membership_user.user_last_name|slice:":1"|upper }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td class="member-name">
+                        {{ member.membership_user.user_first_name }} {{ member.membership_user.user_last_name }}
+                    </td>
+                    <td>{{ member.membership_user.user_email }}</td>
+                    <td>
+                        <span class="member-role-badge">
+                            {{ member.membership_role|title }}
+                        </span>
+                    </td>
+                    <td class="member-contribution">
+                        KES {{ member.total_contribution|default:"0" }}
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ member.membership_status|lower }}">
+                            {{ member.membership_status }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="member-actions">
+                            <button class="btn btn-sm btn-edit" 
+                                    onclick="openEditModal(
+                                        '{{ member.membership_user.id }}',
+                                        '{{ member.membership_user.user_first_name }}',
+                                        '{{ member.membership_user.user_last_name }}',
+                                        '{{ member.membership_user.user_email }}',
+                                        '{{ member.membership_user.user_phone_number }}'
+                                    )">
+                                Edit
+                            </button>
+                            
+                            {% if is_admin %}
+                                {% if member.membership_role == 'member' %}
+                                    <button class="btn btn-sm btn-assign" 
+                                            onclick="openRoleModal('{{ member.membership_user.id }}')">
+                                        Assign Role
+                                    </button>
+                                {% elif member.membership_role != 'admin' %}
+                                    <a href="{% url 'chama:demote_member' chama.id member.membership_user.id %}" 
+                                       class="btn btn-sm btn-warning"
+                                       onclick="return confirm('Are you sure you want to demote {{ member.membership_user.get_full_name }}?')">
+                                        Demote
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                            
+                            {% if member.membership_role != 'admin' %}
+                            <a href="{% url 'chama:remove_member' chama.id member.membership_user.id %}" 
+                               class="btn btn-sm btn-delete"
+                               onclick="return confirm('Are you sure you want to permanently delete {{ member.membership_user.get_full_name }} from this Chama?')">
+                                Remove
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <p class="no-members">No members found.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="add-member-modal" class="modal">
+    <div class="modal-content edit-modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Add New Member</h3>
+            <button class="close-modal" onclick="closeAddModal()">&times;</button>
+        </div>
+        <form id="add-member-form" method="POST" action="{% url 'chama:add_member_to_chama' chama.id %}">
+            {% csrf_token %}
+            <div class="input-field">
+                <label>First Name</label>
+                <input type="text" name="first_name" required>
+            </div>
+            <div class="input-field">
+                <label>Last Name</label>
+                <input type="text" name="last_name" required>
+            </div>
+            <div class="input-field">
+                <label>Email</label>
+                <input type="email" name="email" required>
+            </div>
+            <div class="input-field">
+                <label>Phone Number</label>
+                <input type="text" name="phone_number" placeholder="+254..." required>
+            </div>
+            <div class="input-field">
+                <label>National ID</label>
+                <input type="text" name="national_id" required>
+            </div>
+            <div class="input-field">
+                <button type="submit" class="submit">Add Member & Send Invite</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="edit-member-modal" class="modal">
+    <div class="modal-content edit-modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Member Profile</h3>
+            <button class="close-modal" onclick="closeEditModal()">&times;</button>
+        </div>
+        <form id="edit-member-form" method="POST" action="{% url 'chama:edit_member_details' chama.id %}">
+            {% csrf_token %}
+            <input type="hidden" id="edit-user-id" name="user_id">
+            
+            <div class="input-field">
+                <label>First Name</label>
+                <input type="text" id="edit-first-name" name="first_name" required>
+            </div>
+            <div class="input-field">
+                <label>Last Name</label>
+                <input type="text" id="edit-last-name" name="last_name" required>
+            </div>
+            <div class="input-field">
+                <label>Email (Read Only)</label>
+                <input type="email" id="edit-email" name="email" readonly style="background-color: #f0f0f0;">
+            </div>
+            <div class="input-field">
+                <label>Phone Number</label>
+                <input type="text" id="edit-phone" name="phone_number" required>
+            </div>
+            <div class="input-field">
+                <button type="submit" class="submit">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="assign-role-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Assign Role</h3>
+            <button class="close-modal" onclick="closeRoleModal()">&times;</button>
+        </div>
+        <div style="padding: 20px 0;">
+            <p style="margin-bottom: 15px;">Select a new role for this member:</p>
+            
+            <form id="role-treasurer-form" method="POST" action="">
+                {% csrf_token %}
+                <input type="hidden" name="role" value="treasurer">
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 10px;">
+                    Assign as Treasurer
+                </button>
+            </form>
+            
+            <form id="role-secretary-form" method="POST" action="">
+                {% csrf_token %}
+                <input type="hidden" name="role" value="secretary">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Assign as Secretary
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Add Member Modal Functions ---
+    function openAddMemberModal() {
+        document.getElementById('add-member-modal').classList.add('active');
+    }
+    function closeAddModal() {
+        document.getElementById('add-member-modal').classList.remove('active');
+    }
+
+    // --- Edit Member Modal Functions ---
+    function openEditModal(userId, firstName, lastName, email, phone) {
+        // Populate fields
+        document.getElementById('edit-user-id').value = userId;
+        document.getElementById('edit-first-name').value = firstName;
+        document.getElementById('edit-last-name').value = lastName;
+        document.getElementById('edit-email').value = email;
+        document.getElementById('edit-phone').value = phone;
+        
+        // Show Modal
+        document.getElementById('edit-member-modal').classList.add('active');
+    }
+    function closeEditModal() {
+        document.getElementById('edit-member-modal').classList.remove('active');
+    }
+
+    // --- Assign Role Modal Functions ---
+    function openRoleModal(userId) {
+        // We need to dynamically update the action URL of the forms inside the modal
+        // Construct base URL: /chama/CHAMA_ID/assign-role/USER_ID/
+        var chamaId = "{{ chama.id }}"; 
+        var baseUrl = "/chama/" + chamaId + "/assign-role/" + userId + "/";
+        
+        document.getElementById('role-treasurer-form').action = baseUrl;
+        document.getElementById('role-secretary-form').action = baseUrl;
+
+        document.getElementById('assign-role-modal').classList.add('active');
+    }
+    function closeRoleModal() {
+        document.getElementById('assign-role-modal').classList.remove('active');
+    }
+
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.classList.remove('active');
+        }
+    }
+</script>
+{% endblock %}

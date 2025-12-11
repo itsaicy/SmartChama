@@ -1,0 +1,181 @@
+{% extends 'finance/finance_base.html' %}
+{% load humanize %}
+
+{% block page_title %}{{ cycle.cycle_name }}{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+<div id="message-container" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 90%; max-width: 400px;">
+    {% for message in messages %}
+    <div class="status-badge status-success" style="padding: 1rem; width: 100%; text-align: center; margin-bottom: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+<script>
+    setTimeout(function() {
+        const container = document.getElementById('message-container');
+        if(container) {
+            container.style.transition = "opacity 0.5s ease";
+            container.style.opacity = "0";
+            setTimeout(() => container.remove(), 500);
+        }
+    }, 2000);
+</script>
+{% endif %}
+
+<div style="max-width: 500px; margin: 0 auto;">
+
+    <div class="cycle-card">
+        <div class="card-header-flex">
+            <div>
+                <h2 class="cycle-title" style="font-size: 1.25rem;">{{ cycle.cycle_name }}</h2>
+                <span class="cycle-subtitle">{{ cycle.get_cycle_type_display }}</span>
+            </div>
+            
+            {% if cycle.cycle_status == 'open' %}
+                <div class="badge-pill badge-active">Active</div>
+            {% elif cycle.cycle_status == 'closed' %}
+                <div class="badge-pill badge-completed">Closed</div>
+            {% else %}
+                <div class="badge-pill badge-pending">Pending</div>
+            {% endif %}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+            <div>
+                <span class="detail-label">Target Amount</span>
+                <div class="detail-value" style="font-size: 1.1rem; color: var(--primary-green);">
+                    KES {{ cycle.cycle_amount_required|intcomma }}
+                </div>
+            </div>
+            <div>
+                <span class="detail-label">Deadline</span>
+                <div class="detail-value">
+                    {{ cycle.cycle_deadline|date:"d M Y" }}
+                </div>
+            </div>
+            <div>
+                <span class="detail-label">Beneficiary</span>
+                <div class="detail-value">
+                    {% if cycle.cycle_beneficiary %}
+                        {{ cycle.cycle_beneficiary.get_full_name }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+            </div>
+            <div>
+                <span class="detail-label">Collected</span>
+                <div class="detail-value">
+                    KES {{ cycle.total_contributed|default:"0"|intcomma }}
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+            <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-grey); margin-bottom:4px;">
+                <span>Progress</span>
+                <span>{{ cycle.total_contributed|default:0 }} / {{ cycle.cycle_amount_required }}</span>
+            </div>
+            <div style="width: 100%; height: 8px; background-color: #f1f5f9; border-radius: 4px; overflow: hidden;">
+                <div id="progressBar" style="height: 100%; width: 0%; background-color: var(--primary-green); transition: width 1s ease-out;"></div>
+            </div>
+        </div>
+
+        {% if membership.membership_role in "treasurer,admin,secretary" %}
+        <div style="display: flex; gap: 10px; margin-top: 1.5rem; pt-4; border-top: 1px solid #eee;">
+            <button onclick="openModal('editCycleModal')" class="btn-fab-primary" style="flex:1; height: 40px; font-size: 0.9rem; justify-content: center; background-color: var(--white); color: var(--text-dark); border: 1px solid var(--border-color); box-shadow: none;">
+                <i class="fas fa-edit"></i> Edit
+            </button>
+
+            {% if cycle.cycle_status == 'open' %}
+            <a href="{% url 'finance:close_cycle' cycle.id %}" class="btn-fab-primary" style="flex:1; height: 40px; font-size: 0.9rem; justify-content: center; background-color: #fef3c7; color: #b45309; box-shadow: none;">
+                <i class="fas fa-lock"></i> Close
+            </a>
+            {% endif %}
+
+            <button onclick="openModal('deleteCycleModal')" class="btn-fab-primary" style="flex:1; height: 40px; font-size: 0.9rem; justify-content: center; background-color: #fee2e2; color: #b91c1c; box-shadow: none;">
+                <i class="fas fa-trash"></i> Delete
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<div id="editCycleModal" class="modal-overlay">
+    <div class="modal-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+            <h3 style="font-size:1.25rem; font-weight:700; margin:0;">Edit Cycle</h3>
+            <button onclick="closeModal('editCycleModal')" style="background:none; border:none; cursor:pointer;">
+                <i class="fas fa-times" style="font-size:1.5rem; color:#6b7280;"></i>
+            </button>
+        </div>
+        <form method="POST" action="{% url 'finance:edit_cycle' cycle.id %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" name="cycle_name" class="form-control" value="{{ cycle.cycle_name }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Target Amount (KES)</label>
+                <input type="number" name="cycle_amount" class="form-control" value="{{ cycle.cycle_amount_required }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Deadline</label>
+                <input type="date" name="cycle_deadline" class="form-control" value="{{ cycle.cycle_deadline|date:'Y-m-d' }}" required>
+            </div>
+            <button type="submit" class="btn-submit">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<div id="deleteCycleModal" class="modal-overlay">
+    <div class="modal-panel">
+        <div style="text-align: center; padding: 1rem 0;">
+            <i class="fas fa-exclamation-circle" style="font-size: 3rem; color: #fee2e2; margin-bottom: 1rem;"></i>
+            <h3 style="font-size:1.25rem; font-weight:700; margin-bottom: 0.5rem;">Delete Cycle?</h3>
+            <p style="color: var(--text-grey); margin-bottom: 1.5rem;">This action cannot be undone.</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <button onclick="closeModal('deleteCycleModal')" class="btn-submit" style="background-color: var(--bg-light); color: var(--text-dark); margin-top:0;">Cancel</button>
+                <a href="{% url 'finance:delete_cycle' cycle.id %}" class="btn-submit" style="background-color: var(--danger); margin-top:0;">Delete</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Wraps Django vars in quotes to satisfy JS syntax linters
+        const target = Number("{{ cycle.cycle_amount_required|default:'1' }}");
+        const current = Number("{{ cycle.total_contributed|default:'0' }}");
+        
+        if(target > 0) {
+            const percent = Math.min((current / target) * 100, 100);
+            setTimeout(() => {
+                const bar = document.getElementById('progressBar');
+                if(bar) bar.style.width = percent + "%";
+            }, 300);
+        }
+    });
+
+    function openModal(id) { 
+        const modal = document.getElementById(id);
+        if(modal) modal.style.display = 'flex'; 
+    }
+    function closeModal(id) { 
+        const modal = document.getElementById(id);
+        if(modal) modal.style.display = 'none'; 
+    }
+    
+    // Close on outside click
+    window.onclick = function(e) { 
+        if(e.target.classList.contains('modal-overlay')) {
+            e.target.style.display = 'none'; 
+        }
+    }
+</script>
+
+{% endblock %}

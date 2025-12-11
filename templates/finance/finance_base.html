@@ -1,0 +1,38 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Finance{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/finance.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="finance-wrapper">
+        
+        <div class="finance-container">
+            <div class="page-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-arrow-left" onclick="history.back()" style="cursor:pointer; font-size: 1.2rem;"></i>
+                    <span class="page-title">{% block page_title %}Finance{% endblock %}</span>
+                </div>
+                <div>{% block header_actions %}{% endblock %}</div>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="fin-alert" style="margin-bottom:1rem;">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+
+    </div>
+
+    <script src="{% static 'js/finance.js' %}"></script>
+</body>
+</html>

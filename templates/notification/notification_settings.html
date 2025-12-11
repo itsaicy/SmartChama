@@ -1,55 +1,62 @@
 {% extends 'notification/notification_base.html' %}
-{% block title %}Notification Settings{% endblock %}
-{% block header_title %}Notification Settings{% endblock %}
+{% block header_title %}Settings{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-center">
-  <form method="post" class="notif-card notif-centered" action="{% url 'notification:notification_settings' %}">
-    {% csrf_token %}
-    <div class="mb-4">
-      <h6 class="small-muted">Notification Channels</h6>
+<div class="notif-centered">
+    
+    <div class="notif-card mb-4">
+        <h6 class="fw-bold mb-3">Channels</h6>
+        <p class="small-muted mb-4">Control how you receive updates from your Chama.</p>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <div class="d-flex gap-3 align-items-center">
+                    <div class="rounded-circle p-2 bg-light text-accent border"><i class="bi bi-envelope-fill fs-5"></i></div>
+                    <div>
+                        <div class="fw-bold text-dark">Email Notifications</div>
+                        <div class="small-muted">Weekly summaries & Important alerts</div>
+                    </div>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="allow_email" 
+                           {% if settings.user_notification_settings_allow_email %}checked{% endif %}>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <div class="d-flex gap-3 align-items-center">
+                    <div class="rounded-circle p-2 bg-light text-accent border"><i class="bi bi-chat-dots-fill fs-5"></i></div>
+                    <div>
+                        <div class="fw-bold text-dark">SMS Alerts</div>
+                        <div class="small-muted">Urgent verifications only</div>
+                    </div>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="allow_sms" 
+                           {% if settings.user_notification_settings_allow_sms %}checked{% endif %}>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex gap-3 align-items-center">
+                    <div class="rounded-circle p-2 bg-light text-accent border"><i class="bi bi-bell-fill fs-5"></i></div>
+                    <div>
+                        <div class="fw-bold text-dark">In-App Push</div>
+                        <div class="small-muted">Real-time updates</div>
+                    </div>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="allow_inapp" 
+                           {% if settings.user_notification_settings_allow_inapp %}checked{% endif %}>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <button type="submit" class="btn btn-dark w-100 py-2 fw-bold rounded-pill">Save Preferences</button>
+        </form>
     </div>
-
-    <div class="mb-3 d-flex justify-content-between align-items-center">
-      <div>
-        <div class="fw-semibold">Receive Email</div>
-        <div class="small-muted">For account updates and newsletters</div>
-      </div>
-      <div>
-        <input type="checkbox" name="allow_email" id="allow_email"
-               {% if settings.user_notification_settings_allow_email %}checked{% endif %} />
-      </div>
-    </div>
-
-    <hr>
-
-    <div class="mb-3 d-flex justify-content-between align-items-center">
-      <div>
-        <div class="fw-semibold">Receive SMS</div>
-        <div class="small-muted">For important alerts</div>
-      </div>
-      <div>
-        <input type="checkbox" name="allow_sms" id="allow_sms"
-               {% if settings.user_notification_settings_allow_sms %}checked{% endif %} />
-      </div>
-    </div>
-
-    <hr>
-
-    <div class="mb-3 d-flex justify-content-between align-items-center">
-      <div>
-        <div class="fw-semibold">Receive In-App</div>
-        <div class="small-muted">Real-time updates</div>
-      </div>
-      <div>
-        <input type="checkbox" name="allow_inapp" id="allow_inapp"
-               {% if settings.user_notification_settings_allow_inapp %}checked{% endif %} />
-      </div>
-    </div>
-
-    <div class="d-flex justify-content-end mt-4">
-      <button class="btn btn-warning text-dark fw-semibold" type="submit">Save</button>
-    </div>
-  </form>
 </div>
 {% endblock %}

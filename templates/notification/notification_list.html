@@ -1,127 +1,100 @@
 {% extends 'notification/notification_base.html' %}
-{% load static %}
-{% block title %}Notification Center{% endblock %}
 {% block header_title %}Notification Center{% endblock %}
 
 {% block content %}
-<div class="mb-3">
-  <div class="d-flex align-items-center gap-2 flex-wrap">
-    <a href="?type=all{% if request.GET.chama %}&chama={{ request.GET.chama }}{% endif %}"
-       class="filter-pill {% if filter_type == 'all' %}active{% endif %}">All</a>
-
-    <a href="?type=announcements{% if request.GET.chama %}&chama={{ request.GET.chama }}{% endif %}"
-       class="filter-pill {% if filter_type == 'announcements' %}active{% endif %}">Announcements</a>
-
-    <a href="?type=targeted{% if request.GET.chama %}&chama={{ request.GET.chama }}{% endif %}"
-       class="filter-pill {% if filter_type == 'targeted' %}active{% endif %}">Targeted</a>
-
-    <form method="get" class="ms-2 d-flex align-items-center">
-      <select name="chama" class="form-select form-select-sm" onchange="this.form.submit()">
-        <option value="">All Chamas</option>
-        {% for c in chamas %}
-          <option value="{{ c.id }}"
-                  {% if selected_chama_id == c.id|stringformat:'s' %}selected{% endif %}>
-            {{ c.chama_name }}
-          </option>
-        {% endfor %}
-      </select>
-      <input type="hidden" name="type" value="{{ filter_type }}">
-    </form>
-
-    <div class="ms-auto small-muted">Unread: {{ unread_count }}</div>
-  </div>
-</div>
-
-<div class="list-group">
-  {% for n in notifications %}
-    <div class="list-group-item notif-card d-flex align-items-start gap-3 {% if not n.notification_is_read %}accent{% endif %}">
-      <div class="icon-box">
-        <i class="bi bi-bell"></i>
-      </div>
-
-      <div class="flex-grow-1">
-        <div class="d-flex justify-content-between">
-          <div>
-            <a href="{% url 'notification:notification_detail' n.id %}" class="fw-semibold text-decoration-none">
-              {{ n.notification_title|default:n.notification_type|title }}
-            </a>
-            <div class="small-muted">
-              {{ n.notification_chama.chama_name }} •
-              {% if n.notification_sender %}
-                {{ n.notification_sender.get_full_name|default:n.notification_sender.username }}
-              {% else %}
-                System
-              {% endif %}
-            </div>
-          </div>
-          <div class="text-end small-muted">
-            <div>{{ n.notification_created_at|timesince }} ago</div>
-            {% if not n.notification_is_read %}
-              <span class="badge">New</span>
+<div class="notif-centered"> <div class="mb-4 text-center">
+        <div class="filter-scroll-container">
+            <a href="?type=all{% if active_chama %}&chama={{ active_chama }}{% endif %}" 
+               class="filter-pill {% if filter_type == 'all' %}active{% endif %}">All</a>
+            
+            <a href="?type=announcements{% if active_chama %}&chama={{ active_chama }}{% endif %}" 
+               class="filter-pill {% if filter_type == 'announcements' %}active{% endif %}">Announcements</a>
+            
+            <a href="?type=targeted{% if active_chama %}&chama={{ active_chama }}{% endif %}" 
+               class="filter-pill {% if filter_type == 'targeted' %}active{% endif %}">Targeted</a>
+               
+            {% if user_chamas|length > 1 %}
+            <form method="get" class="d-inline">
+                 <select name="chama" class="filter-pill" style="padding-right: 30px; appearance: none; cursor:pointer;" onchange="this.form.submit()">
+                    <option value="">All Chamas</option>
+                    {% for c in user_chamas %}
+                        <option value="{{ c.id }}" {% if active_chama|stringformat:"s" == c.id|stringformat:"s" %}selected{% endif %}>
+                            {{ c.chama_name }}
+                        </option>
+                    {% endfor %}
+                 </select>
+            </form>
             {% endif %}
-          </div>
         </div>
-        <div class="mt-2 small-muted">{{ n.notification_message|truncatechars:120 }}</div>
-      </div>
-
-      <div class="ms-2 align-self-center d-flex flex-column gap-1">
-        {% if not n.notification_is_read %}
-          <form method="post" action="{% url 'notification:mark_as_read' n.id %}">
-            {% csrf_token %}
-            <button class="btn btn-sm" title="Mark as read">✓</button>
-          </form>
-        {% endif %}
-        {% if n.notification_sender == request.user %}
-          <a href="{% url 'notification:edit_notification' n.id %}" class="text-warning small" title="Edit">
-            <i class="bi bi-pencil-square"></i>
-          </a>
-          <a href="{% url 'notification:delete_notification' n.id %}" class="text-danger small"
-             onclick="return confirm('Delete this notification?');" title="Delete">
-            <i class="bi bi-trash"></i>
-          </a>
-        {% endif %}
-      </div>
     </div>
-  {% empty %}
-    <div class="notif-card text-center text-muted">No notifications.</div>
-  {% endfor %}
-</div>
 
-<div class="d-flex justify-content-center mt-4">
-  <nav aria-label="Page navigation">
-    <ul class="pagination pagination-sm">
-      {% if notifications.has_previous %}
-        <li class="page-item">
-          <a class="page-link"
-             href="?page={{ notifications.previous_page_number }}{% if request.GET.chama %}&chama={{ request.GET.chama }}{% endif %}{% if filter_type %}&type={{ filter_type }}{% endif %}">
-            Prev
-          </a>
-        </li>
-      {% endif %}
+    <div class="notification-list">
+        {% for n in notifications %}
+        <a href="{% url 'notification:notification_detail' n.id %}" class="text-decoration-none text-dark">
+            <div class="notif-card d-flex gap-3 align-items-start {% if not n.notification_is_read %}border-start border-5{% endif %}"
+                 {% if not n.notification_is_read %}style="border-left-color: var(--app-accent) !important;"{% endif %}>
+                
+                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" 
+                     style="width: 48px; height: 48px; background-color: #f1f5f9; color: #000;">
+                    {% if n.notification_type == 'payment' %}<i class="bi bi-cash fs-5"></i>
+                    {% elif n.notification_type == 'meeting' %}<i class="bi bi-calendar-event fs-5"></i>
+                    {% elif n.notification_type == 'announcement' %}<i class="bi bi-megaphone fs-5"></i>
+                    {% else %}<i class="bi bi-bell fs-5"></i>{% endif %}
+                </div>
 
-      <li class="page-item disabled">
-        <span class="page-link">{{ notifications.number }} / {{ notifications.paginator.num_pages }}</span>
-      </li>
+                <div class="flex-grow-1 overflow-hidden">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-1 fw-bold text-truncate">{{ n.notification_title|default:n.get_notification_type_display }}</h6>
+                        <small class="small-muted flex-shrink-0 ms-2">{{ n.notification_created_at|timesince }} ago</small>
+                    </div>
+                    <div class="small-muted mb-1 text-truncate">
+                        {{ n.notification_chama.chama_name }} • {{ n.notification_sender.get_full_name|default:"System" }}
+                    </div>
+                    <p class="text-secondary small mb-0 text-truncate">
+                        {{ n.notification_message }}
+                    </p>
+                </div>
+                
+                {% if not n.notification_is_read %}
+                <div class="align-self-center">
+                    <i class="bi bi-circle-fill text-accent" style="font-size: 8px;"></i>
+                </div>
+                {% endif %}
+            </div>
+        </a>
+        {% empty %}
+        <div class="text-center py-5">
+            <div class="mb-3">
+                <i class="bi bi-inbox fs-1 text-muted opacity-25"></i>
+            </div>
+            <h6 class="text-muted">No notifications yet</h6>
+        </div>
+        {% endfor %}
+    </div>
 
-      {% if notifications.has_next %}
-        <li class="page-item">
-          <a class="page-link"
-             href="?page={{ notifications.next_page_number }}{% if request.GET.chama %}&chama={{ request.GET.chama }}{% endif %}{% if filter_type %}&type={{ filter_type }}{% endif %}">
-            Next
-          </a>
-        </li>
-      {% endif %}
-    </ul>
-  </nav>
-</div>
+    {% if is_paginated %}
+    <div class="d-flex justify-content-center mt-4 mb-5">
+        <nav>
+            <ul class="pagination pagination-sm">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link text-dark" href="?page={{ page_obj.previous_page_number }}&type={{ filter_type }}">Prev</a>
+                </li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link border-0 bg-transparent">{{ page_obj.number }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link text-dark" href="?page={{ page_obj.next_page_number }}&type={{ filter_type }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
 
-{% if active_chama %}
-  <button id="create-btn" class="float-create js-float-create" title="Create">
-    <strong>+</strong>
-  </button>
+</div> {% if active_chama %}
+    <a href="{% url 'notification:create_notification' active_chama %}" class="float-create">
+        <i class="bi bi-plus-lg"></i>
+    </a>
 {% endif %}
-{% endblock %}
-
-{% block extra_js %}
-<script src="{% static 'js/notification_list.js' %}" defer></script>
 {% endblock %}

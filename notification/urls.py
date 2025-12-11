@@ -3,13 +3,15 @@ from notification import views
 from notification.meeting_views import (
     meeting_detail, meeting_list, delete_meeting,
     create_meeting, update_meeting, admin_meeting_list,
-    my_attendance, confirm_attendance
+    my_attendance, confirm_attendance, trigger_attendance_confirmation
 )
 
 app_name = "notification"
 
 urlpatterns = [
-    # Notifications
+    # -------------------------------------------------
+    # General Notifications
+    # -------------------------------------------------
     path("", views.NotificationListView.as_view(), name="notification_list"),
     path("chama/<int:chama_id>/", views.NotificationListView.as_view(), name="chama_notifications"),
     path("detail/<int:pk>/", views.NotificationDetailView.as_view(), name="notification_detail"),
@@ -21,14 +23,27 @@ urlpatterns = [
     path("edit/<int:pk>/", views.NotificationUpdateView.as_view(), name="edit_notification"),
     path("delete/<int:pk>/", views.NotificationDeleteView.as_view(), name="delete_notification"),
     path("mark/<int:id>/", views.mark_as_read, name="mark_as_read"),
+    path("reply/save/<int:reply_id>/", views.save_reply_edit, name="save_reply_edit"),
+    path("reply/delete/<int:reply_id>/", views.delete_reply, name="delete_reply"),
 
-    # Meetings
+    # -------------------------------------------------
+    # Meetings (User Views)
+    # -------------------------------------------------
     path("meetings/", meeting_list, name="meeting_list"),
     path("meetings/<int:pk>/", meeting_detail, name="meeting_detail"),
+    path("meetings/<int:pk>/confirm/<str:status>/", confirm_attendance, name="confirm_attendance"),
     path("attendance/my/", my_attendance, name="my_attendance"),
+
+    # -------------------------------------------------
+    # Meetings (Official/Admin Views)
+    # -------------------------------------------------
     path("official/meetings/", admin_meeting_list, name="admin_meeting_list"),
     path("official/meetings/create/", create_meeting, name="create_meeting"),
     path("official/meetings/<int:pk>/edit/", update_meeting, name="update_meeting"),
     path("official/meetings/<int:pk>/delete/", delete_meeting, name="delete_meeting"),
-    path("meetings/<int:pk>/confirm/<str:status>/", confirm_attendance, name="confirm_attendance"),
+    
+    # This path was missing and causing the "NoReverseMatch" error
+    path("official/meetings/trigger/<int:meeting_id>/<int:user_id>/<str:status>/", 
+         trigger_attendance_confirmation, 
+         name="trigger_confirm"),
 ]

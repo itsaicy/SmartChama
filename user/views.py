@@ -11,7 +11,8 @@ from django.utils.http import urlsafe_base64_encode,urlsafe_base64_decode
 from django.utils.encoding import force_bytes,force_str
 from django.core.mail import EmailMessage
 from user.tokens import account_activation_token
-
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
 
 # Home Page
 @login_required
@@ -38,7 +39,7 @@ def activate(request, uidb64, token):
         return redirect('login')
     else:
         messages.error(request, "Activation link is invalid")
-    return redirect('home')
+    return redirect('signup')
 
 def activateEmail(request, user, to_email):
     mail_subject = 'Activate your user account'
@@ -69,7 +70,7 @@ def signup_view(request):
             activateEmail(request, user, form.cleaned_data.get('user_email'))
 
             messages.success(request, "Account created successfully! Please log in.")
-            return redirect("home")
+            return redirect("login")
         
         else:
             for error in list(form.errors.values()):
@@ -140,3 +141,22 @@ def upload_profile_picture(request):
 
     # Redirect back to the page the user came from (The Dashboard)
     return redirect(request.META.get('HTTP_REFERER', '/'))
+
+@login_required
+def change_password(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            # This is critical: it keeps the user logged in after password change
+            update_session_auth_hash(request, user) 
+            messages.success(request, 'Your password was successfully updated!')
+            return redirect('profile') # Redirects back to the profile page
+        else:
+            messages.error(request, 'Please correct the error below.')
+    else:
+        form = PasswordChangeForm(request.user)
+    
+    return render(request, 'registration/password_change.html', {
+        'form': form
+    })

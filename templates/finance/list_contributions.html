@@ -1,0 +1,153 @@
+{% extends 'finance/finance_base.html' %}
+{% load humanize %}
+
+{% block page_title %}My Transactions{% endblock %}
+
+{% block content %}
+
+<div class="filter-scroll">
+    <div class="filter-chip active" onclick="filterList('all')">All</div>
+    <div class="filter-chip" onclick="filterList('contribution')">Contributions</div>
+    <div class="filter-chip" onclick="filterList('loan_repayment')">Loan Repayments</div>
+    <div class="filter-chip" onclick="filterList('penalty')">Penalties</div>
+</div>
+
+<div id="transactionList" style="padding-bottom: 80px;">
+    {% for c in contributions %}
+    <div class="transaction-card list-item {% if c.contribution_status == 'pending' %}pending-transaction{% endif %}" 
+         data-id="{{ c.id }}" 
+         data-type="{{ c.contribution_type }}" 
+         style="border-left: 4px solid {% if c.contribution_status == 'success' %}var(--primary-green){% elif c.contribution_status == 'pending' %}#F59E0B{% else %}#9CA3AF{% endif %};">
+        
+        <div class="item-left">
+            {% if c.contribution_status == 'failed' or c.contribution_status == 'cancelled' %}
+                <div class="icon-box" style="background-color: #F3F4F6; color: #6B7280;">
+                    <i class="fas fa-ban"></i>
+                </div>
+            {% elif c.contribution_type == 'contribution' %}
+                <div class="icon-box icon-in">
+                    <i class="fas fa-arrow-up"></i>
+                </div>
+            {% elif c.contribution_type == 'loan_repayment' %}
+                <div class="icon-box icon-out"> 
+                    <i class="fas fa-arrow-down"></i>
+                </div>
+            {% elif c.contribution_type == 'penalty' %}
+                <div class="icon-box icon-warn">
+                    <i class="fas fa-gavel"></i>
+                </div>
+            {% else %}
+                <div class="icon-box icon-in">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+            {% endif %}
+
+            <div>
+                <div class="item-main">{{ c.get_contribution_type_display }}</div>
+                <div class="item-sub">
+                    {{ c.contribution_created_at|date:"d M Y, h:i A" }} 
+                    {% if c.contribution_reference %} 
+                        • <span style="font-family: monospace;">{{ c.contribution_reference|slice:":8"|upper }}</span>
+                    {% endif %}
+                </div>
+                
+                <div style="display:flex; align-items:center; gap: 10px; margin-top:6px;">
+                    {% if c.contribution_status == 'success' %}
+                        <span class="status-badge status-success">Success</span>
+                    {% elif c.contribution_status == 'pending' %}
+                        <span class="status-badge status-pending">
+                            <i class="fas fa-sync fa-spin" style="font-size: 0.7rem; margin-right: 4px;"></i> Processing
+                        </span>
+                    {% elif c.contribution_status == 'cancelled' %}
+                        <span class="status-badge" style="background-color: #E5E7EB; color: #374151;">
+                            Cancelled
+                        </span>
+                    {% else %}
+                        <span class="status-badge status-failed">Failed</span>
+                    {% endif %}
+
+                    {% if c.contribution_reference and c.contribution_status == 'success' %}
+                        <a href="{% url 'finance:query_transaction_page' %}?ref={{ c.contribution_reference }}" 
+                           style="font-size: 0.8rem; font-weight: 600; color: var(--primary-green); text-decoration: none;">
+                            View Receipt
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="item-amount" style="color: {% if c.contribution_status == 'cancelled' %}#9CA3AF{% else %}var(--primary-black){% endif %};">
+            KES {{ c.contribution_amount|floatformat:2 }}
+        </div>
+    </div>
+    {% empty %}
+        <div style="text-align:center; padding:4rem 1rem; color:#64748b;">
+            <i class="fas fa-receipt" style="font-size: 3rem; margin-bottom: 1rem; opacity:0.3;"></i>
+            <p>No transactions found.</p>
+        </div>
+    {% endfor %}
+</div>
+
+<a href="{% url 'finance:create_contribution' chama.id %}" class="fab-btn" title="New Transaction">
+    <i class="fas fa-plus"></i>
+</a>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Find all transactions marked as 'pending'
+        const pendingItems = document.querySelectorAll('.pending-transaction');
+
+        if (pendingItems.length > 0) {
+            console.log("Tracking " + pendingItems.length + " pending transactions...");
+
+            // Poll every 3 seconds for faster updates
+            const checkInterval = setInterval(function() {
+                
+                pendingItems.forEach(card => {
+                    const contribId = card.getAttribute('data-id');
+                    
+                    fetch(`/finance/check-contribution/${contribId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(`Transaction ${contribId} status: ${data.status}`);
+                        
+                        // FIX: Reload if status is NOT 'pending' anymore
+                        // This handles 'success', 'failed', AND 'cancelled'
+                        if (data.status !== 'pending') {
+                            window.location.reload();
+                        }
+                    })
+                    .catch(error => console.error('Error checking status:', error));
+                });
+
+            }, 3000); // 3 seconds interval
+            
+            // Stop checking after 5 minutes to save resources
+            setTimeout(() => clearInterval(checkInterval), 300000);
+        }
+    });
+
+    // Simple Filter Logic (Optional helper)
+    function filterList(type) {
+        const items = document.querySelectorAll('.list-item');
+        const chips = document.querySelectorAll('.filter-chip');
+        
+        // Update active chip
+        chips.forEach(chip => chip.classList.remove('active'));
+        event.target.classList.add('active');
+
+        items.forEach(item => {
+            if (type === 'all') {
+                item.style.display = 'flex';
+            } else {
+                if (item.getAttribute('data-type') === type) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            }
+        });
+    }
+</script>
+
+{% endblock %}

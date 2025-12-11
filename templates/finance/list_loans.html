@@ -1,0 +1,58 @@
+{% extends 'finance/finance_base.html' %}
+{% block page_title %}Loans{% endblock %}
+
+{% block content %}
+<div class="filter-scroll">
+    <div class="filter-chip active" onclick="filterList('all')">All</div>
+    <div class="filter-chip" onclick="filterList('pending')">Pending</div>
+    <div class="filter-chip" onclick="filterList('active')">Active</div>
+    <div class="filter-chip" onclick="filterList('rejected')">Rejected</div>
+</div>
+
+{% for loan in loans %}
+<div class="card list-item" data-status="{{ loan.loan_status }}" onclick="window.location.href='{% url 'finance:loan_detail' loan.id %}'" style="cursor:pointer; display:block;">
+    <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+        <span class="item-sub">#LOAN-{{ loan.id }}</span>
+        <span class="status-badge status-{{ loan.loan_status }}">{{ loan.loan_status }}</span>
+    </div>
+    <div style="font-weight:bold; font-size:1.1rem; margin-bottom:0.5rem;">
+        {{ loan.loan_user.get_full_name }}
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="item-amount" style="font-size:1.2rem;">KES {{ loan.loan_amount }}</div>
+        <div class="item-sub">{{ loan.loan_created_at|date:"M d, Y" }}</div>
+    </div>
+</div>
+{% empty %}
+<p style="text-align:center; color:#666;">No loan records found.</p>
+{% endfor %}
+
+<button class="fab-btn" onclick="openModal('loanApplyModal')">
+    <i class="fas fa-plus"></i>
+</button>
+
+<div id="loanApplyModal" class="modal-overlay">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3>Apply for Loan</h3>
+            <span style="font-size:1.5rem; cursor:pointer;" onclick="closeModal('loanApplyModal')">&times;</span>
+        </div>
+        <form method="POST" action="{% url 'finance:request_loan' chama.id %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Loan Amount</label>
+                <input type="number" name="amount" class="form-input" placeholder="KES 0.00" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Purpose</label>
+                <textarea name="purpose" class="form-input" rows="3" placeholder="Describe why you need this loan..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Repayment Deadline</label>
+                <input type="date" name="deadline" class="form-input" required>
+            </div>
+            <button type="submit" class="btn-finance btn-full">Submit Application</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

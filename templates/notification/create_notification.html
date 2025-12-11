@@ -1,77 +1,95 @@
 {% extends 'notification/notification_base.html' %}
-{% block title %}Create Notification{% endblock %}
 {% block header_title %}Create Notification{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-center">
-  <form method="post" class="notif-card notif-centered js-create-notification-form" action="{% url 'notification:create_notification' chama.id %}">
+<form method="post" class="notif-centered pb-5">
     {% csrf_token %}
-    <div class="mb-3">
-      <label class="form-label small-muted">Title</label>
-      <input name="title" class="form-control bg-transparent text-white" placeholder="Meeting Reminder" required>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label small-muted">Message</label>
-      <textarea name="message" class="form-control bg-transparent text-white" rows="6" placeholder="Enter your notification message here..." required></textarea>
-    </div>
-
-    <div class="d-flex gap-2 mb-3">
-      <select name="notification_type" class="form-select form-select-sm bg-transparent text-white" style="min-width:160px;">
-        <option value="announcement">Announcement</option>
-        <option value="meeting">Meeting</option>
-        <option value="reminder">Reminder</option>
-        <option value="loan">Loan</option>
-        <option value="payment">Payment</option>
-      </select>
-
-      <select name="priority" class="form-select form-select-sm bg-transparent text-white" style="min-width:120px;">
-        <option value="normal">Normal</option>
-        <option value="high">High</option>
-        <option value="low">Low</option>
-      </select>
-    </div>
-
-    <div class="mb-3">
-      <button type="button" class="btn btn-outline-light js-open-members">Select Target Members</button>
-      <span class="ms-3 small-muted js-member-count">Sending to all members</span>
-    </div>
-
-    <div class="d-flex justify-content-between mt-4">
-      <a href="{% url 'notification:notification_list' %}" class="btn btn-light">Cancel</a>
-      <button class="btn btn-warning text-dark fw-semibold" type="submit">Send</button>
-    </div>
-  </form>
-</div>
-
-<div class="modal fade js-members-modal" id="membersModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-scrollable">
-    <div class="modal-content bg-dark text-white">
-      <div class="modal-header border-0">
-        <h5 class="modal-title fw-semibold">Select Members</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="list-group js-members-list">
-          {% for m in members %}
-            <label class="list-group-item d-flex justify-content-between align-items-center js-member-item">
-              <div>
-                <div class="fw-semibold">{{ m.membership_user.get_full_name|default:m.membership_user.username }}</div>
-                <div class="small-muted">{{ m.membership_user.email }}</div>
-              </div>
-              <input type="checkbox" class="form-check-input" name="target_members" value="{{ m.id }}">
-            </label>
-          {% endfor %}
+    
+    <div class="notif-card mb-3">
+        <div class="mb-3">
+            <label class="fw-bold small mb-1">Title</label>
+            {{ form.notification_title }}
         </div>
-      </div>
-      <div class="modal-footer border-0">
-        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
-{% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'js/notification_form.js' %}" defer></script>
+        <div class="mb-3">
+            <label class="fw-bold small mb-1">Message</label>
+            {{ form.notification_message }}
+        </div>
+
+        <div class="row">
+            <div class="col-6">
+                <label class="fw-bold small mb-1">Type</label>
+                {{ form.notification_type }}
+            </div>
+            <div class="col-6">
+                <label class="fw-bold small mb-1">Priority</label>
+                {{ form.notification_priority }}
+            </div>
+        </div>
+    </div>
+
+    <div class="card border border-light shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3" 
+             style="cursor: pointer;" 
+             data-bs-toggle="collapse" 
+             data-bs-target="#recipientList" 
+             aria-expanded="true">
+            <div class="d-flex align-items-center gap-2">
+                <span class="small-muted text-uppercase fw-bold ls-1">Select Members</span>
+                <i class="bi bi-chevron-down collapse-icon text-muted"></i>
+            </div>
+            
+            <div class="form-check" onclick="event.stopPropagation();">
+                <input class="form-check-input" type="checkbox" id="selectAll" name="select_all_members">
+                <label class="form-check-label small fw-bold" for="selectAll">Select All</label>
+            </div>
+        </div>
+
+        <div class="collapse show" id="recipientList">
+            <div class="card-body p-0" style="max-height: 300px; overflow-y: auto;">
+                <div class="list-group list-group-flush">
+                    {% for m in members %}
+                    <label class="list-group-item border-0 d-flex gap-3 align-items-center px-3 py-3 action-hover">
+                        <input class="form-check-input member-checkbox" type="checkbox" name="target_members" value="{{ m.id }}">
+                        <div class="d-flex align-items-center gap-2 w-100">
+                            <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center text-muted fw-bold" style="width:36px; height:36px; font-size: 14px;">
+                                {{ m.membership_user.user_first_name|first }}
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark" style="font-size: 0.95rem;">{{ m.membership_user.get_full_name }}</div>
+                                <div class="d-flex justify-content-between w-100">
+                                    <small class="text-muted" style="font-size: 0.75rem;">{{ m.membership_role|title }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-accent w-100 py-3 shadow-sm rounded-pill fw-bold">
+        <i class="bi bi-send me-2"></i> Send Notification
+    </button>
+</form>
+
+<script>
+    // Select All Logic
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.member-checkbox');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+    });
+
+    // Toggle Icon Rotation logic (Optional if using Bootstrap built-in class handling, but failsafe here)
+    const recipientHeader = document.querySelector('[data-bs-target="#recipientList"]');
+    const recipientCollapse = document.getElementById('recipientList');
+    
+    recipientCollapse.addEventListener('show.bs.collapse', () => {
+        recipientHeader.classList.remove('collapsed');
+    });
+    recipientCollapse.addEventListener('hide.bs.collapse', () => {
+        recipientHeader.classList.add('collapsed');
+    });
+</script>
 {% endblock %}

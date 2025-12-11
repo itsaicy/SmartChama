@@ -1,51 +1,37 @@
 {% extends "notification/meeting/meeting_base.html" %}
-{% block title %}My Attendance{% endblock %}
-
 {% block content %}
-<div class="d-flex justify-content-center">
-  <div class="card">
-    <h2 class="mb-4 text-center">My Attendance</h2>
-
-    {% if records %}
-    <div class="table-responsive">
-      <table class="table table-hover align-middle">
-        <thead>
-          <tr>
-            <th scope="col">Meeting</th>
-            <th scope="col">Date</th>
-            <th scope="col">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for record in records %}
-          <tr>
-            <td>
-              <a href="{% url 'notification:meeting_detail' record.attendance_meeting.pk %}">
-                {{ record.attendance_meeting.meeting_title }}
-              </a>
-            </td>
-            <td>{{ record.attendance_meeting.meeting_date|date:"D, d M Y H:i" }}</td>
-            <td>
-              {% if record.status == "present" %}
-                <span class="badge status-badge bg-success">Present</span>
-              {% elif record.status == "absent" %}
-                <span class="badge status-badge bg-danger">Absent</span>
-              {% elif record.status == "excused" %}
-                <span class="badge status-badge bg-warning text-dark">Excused</span>
-              {% else %}
-                <span class="badge status-badge bg-secondary">{{ record.status|capfirst }}</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+<div class="card-vision">
+    <div class="header-row">
+        <a href="javascript:history.back()" class="back-btn"><span class="material-icons">arrow_back_ios_new</span></a>
+        <h2 class="page-title">My Attendance</h2>
     </div>
-    {% else %}
-    <p class="text-muted text-center">You have no attendance records yet.</p>
-    {% endif %}
 
-    
-  </div>
+    <div class="filter-row">
+        <a href="?filter=upcoming" class="btn-pill {% if filter_type == 'upcoming' %}active{% endif %}">Upcoming</a>
+        <a href="?filter=past" class="btn-pill {% if filter_type == 'past' %}active{% endif %}">Past</a>
+    </div>
+
+    <div>
+        {% for record in records %}
+        <a href="{% url 'notification:meeting_detail' record.attendance_meeting.pk %}" class="meeting-card-item">
+            <div class="meeting-icon-square">
+                {% if record.attendance_status == 'present' %}
+                    <span class="material-icons text-success">check_circle</span>
+                {% elif record.attendance_status == 'absent' %}
+                    <span class="material-icons text-danger">cancel</span>
+                {% else %}
+                    <span class="material-icons text-muted">help_outline</span>
+                {% endif %}
+            </div>
+            <div class="meeting-info">
+                <div class="meeting-title">{{ record.attendance_meeting.meeting_title }}</div>
+                <div class="meeting-meta">{{ record.attendance_meeting.meeting_date|date:"M d, Y" }}</div>
+            </div>
+            <span class="status-badge" style="background:#eee;">{{ record.attendance_status|capfirst }}</span>
+        </a>
+        {% empty %}
+        <div class="text-center py-5 text-muted">No attendance records found.</div>
+        {% endfor %}
+    </div>
 </div>
 {% endblock %}

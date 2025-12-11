@@ -1,39 +1,45 @@
 {% extends 'notification/meeting/meeting_base.html' %}
-{% block title %}Meetings{% endblock %}
-
 {% block content %}
-<div class="d-flex justify-content-center">
-  <div class="card">
-    <h2 class="mb-4 text-center">Meetings</h2>
-
-    <div class="filter-buttons">
-      <a href="?filter=upcoming" class="btn btn-sm filter-btn">Upcoming</a>
-      <a href="?filter=past" class="btn btn-sm filter-btn">Past</a>
-      <a href="?filter=online" class="btn btn-sm filter-btn">Online</a>
-      <a href="?filter=physical" class="btn btn-sm filter-btn">Physical</a>
+<div class="card-vision">
+    <div class="header-row">
+        <a href="javascript:history.back()" class="back-btn"><span class="material-icons">arrow_back_ios_new</span></a>
+        <h2 class="page-title">Meetings</h2>
     </div>
 
-    {% if meetings %}
-    <div class="list-group">
-      {% for meeting in meetings %}
-      <a href="{% url 'notification:meeting_detail' meeting.pk %}" class="list-group-item list-group-item-action">
-        <div class="d-flex justify-content-between align-items-center">
-          <h5 class="mb-1">{{ meeting.meeting_title }}</h5>
-          <small>{{ meeting.meeting_date|date:"D, d M Y H:i" }}</small>
-        </div>
-        <p class="mb-1">
-          {% if meeting.meeting_type == "online" %}
-            🎥 Online
-          {% else %}
-            📍 Physical | {{ meeting.meeting_venue }}
-          {% endif %}
-        </p>
-      </a>
-      {% endfor %}
+    <div class="filter-row">
+        <a href="?filter=all" class="btn-pill {% if filter_type == 'all' %}active{% endif %}">All</a>
+        <a href="?filter=upcoming" class="btn-pill {% if filter_type == 'upcoming' %}active{% endif %}">Upcoming</a>
+        <a href="?filter=past" class="btn-pill {% if filter_type == 'past' %}active{% endif %}">Past</a>
+        <a href="?filter=online" class="btn-pill {% if filter_type == 'online' %}active{% endif %}">Online</a>
     </div>
-    {% else %}
-    <p class="text-muted text-center">No meetings available.</p>
-    {% endif %}
-  </div>
+
+    <div class="mt-2">
+        {% for meeting in meetings %}
+        <a href="{% url 'notification:meeting_detail' meeting.pk %}" class="meeting-card-item">
+            <div class="meeting-icon-square">
+                <span class="material-icons">
+                    {% if meeting.meeting_type == 'physical' %}location_on{% else %}videocam{% endif %}
+                </span>
+            </div>
+            <div class="meeting-info">
+                <div class="meeting-title">{{ meeting.meeting_title }}</div>
+                <div class="meeting-meta">
+                    {{ meeting.meeting_date|date:"M d, Y • g:i A" }}
+                    <br>
+                    <span class="text-muted small">
+                        {% if meeting.meeting_type == 'physical' %}
+                            📍 {{ meeting.meeting_venue }}
+                        {% else %}
+                            🎥 Online
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            <span class="material-icons text-muted">chevron_right</span>
+        </a>
+        {% empty %}
+        <div class="text-center py-5 text-muted">No meetings found.</div>
+        {% endfor %}
+    </div>
 </div>
 {% endblock %}

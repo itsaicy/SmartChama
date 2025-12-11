@@ -1,0 +1,59 @@
+{% extends 'chama/chama_base.html' %}
+{% load static %}
+
+{% block title %}All Chamas - SmartChama{% endblock %}
+
+{% block content %}
+<div class="chama-list-container">
+    <div class="page-header">
+        <h1 class="page-title">Available Chamas</h1>
+        <div class="header-actions">
+            <a href="{% url 'chama:create_chama' %}" class="btn btn-primary">
+                <span>➕</span> Create New Chama
+            </a>
+        </div>
+    </div>
+
+    {% if chamas %}
+    <div class="chama-cards-grid">
+        {% for chama in chamas %}
+        <div class="chama-card">
+            <div class="chama-card-header">
+                <h4>{{ chama.chama_name }}</h4>
+                <p>{{ chama.chama_description|truncatewords:15 }}</p>
+            </div>
+
+            <div class="chama-card-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Admin:</span>
+                    <span class="meta-value">{{ chama.chama_created_by.user_first_name }} {{ chama.chama_created_by.user_last_name }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Members:</span>
+                    <span class="meta-value">{{ chama.members.count }} / {{ chama.chama_max_members }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Contribution:</span>
+                    <span class="meta-value">KES {{ chama.chama_contribution_amount }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Frequency:</span>
+                    <span class="meta-value">{{ chama.chama_contribution_frequency|title }}</span>
+                </div>
+            </div>
+
+            <div class="chama-card-actions">
+                <a href="{% url 'chama:join_chama' chama.pk %}" class="btn btn-primary">Join</a>
+                <a href="{% url 'chama:chama_detail' chama.pk %}" class="btn btn-outline">View Details</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-requests">
+        <p>No chamas available at the moment.</p>
+        <a href="{% url 'chama:create_chama' %}" class="btn btn-primary" style="margin-top: 20px;">Create Your First Chama</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

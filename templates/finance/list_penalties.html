@@ -1,0 +1,236 @@
+{% extends 'finance/finance_base.html' %}
+{% load humanize %}
+
+{% block page_title %}Penalties{% endblock %}
+
+{% block content %}
+
+{% if current_role in 'treasurer,admin,chairperson' %}
+<div style="margin-bottom:1rem; text-align:right;">
+    <button class="btn-finance" onclick="openModal('penaltyModal')">
+        <i class="fas fa-plus"></i> Issue Penalty
+    </button>
+</div>
+{% endif %}
+
+<div id="penaltyList" style="padding-bottom: 80px;">
+{% for p in penalties %}
+    <div class="transaction-card list-item" style="border-left: 4px solid {% if p.penalty_paid %}#10B981{% else %}#F59E0B{% endif %};">
+        
+        <div class="item-left">
+            <div class="icon-box icon-warn">
+                <i class="fas fa-exclamation"></i>
+            </div>
+            <div>
+                <div class="item-main">{{ p.penalty_reason }}</div>
+                <div class="item-sub">
+                    {{ p.penalty_created_at|date:"d M Y" }} • {{ p.penalty_user.get_full_name }}
+                </div>
+                
+                <div style="display:flex; align-items:center; gap: 8px; margin-top: 5px;">
+                    {% if p.penalty_paid %}
+                        <span class="status-badge status-success">Paid</span>
+                    {% else %}
+                        <span class="status-badge status-pending">Unpaid</span>
+                        
+                        <button class="btn btn-sm btn-primary" 
+                                style="padding: 2px 12px; font-size: 0.75rem;"
+                                onclick="openPayModal('{{ p.id }}', '{{ p.penalty_reason }}', '{{ p.penalty_amount }}')">
+                            Pay Now
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div style="display:flex; align-items:center; gap:15px;">
+            <div class="item-amount" style="color:var(--danger); font-weight:bold;">
+                - KES {{ p.penalty_amount|floatformat:0|intcomma }}
+            </div>
+
+            {% if current_role in 'treasurer,admin' %}
+                <div style="display:flex; gap: 12px; align-items:center;">
+                    
+                    {% if not p.penalty_paid %}
+                    <a href="{% url 'finance:send_penalty_reminder' p.id %}" title="Send Reminder" style="color:#f59e0b; cursor:pointer;">
+                        <i class="fas fa-bell"></i>
+                    </a>
+                    {% endif %}
+
+                    <i class="fas fa-edit" 
+                       title="Edit" 
+                       style="color:var(--primary-black); cursor:pointer;"
+                       onclick="openEditModal('{{ p.id }}', '{{ p.penalty_amount }}', '{{ p.penalty_reason }}')">
+                    </i>
+
+                    <i class="fas fa-trash" 
+                       title="Delete" 
+                       style="color:var(--danger); cursor:pointer;"
+                       onclick="openDeleteModal('{{ p.id }}')">
+                    </i>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% empty %}
+    <div style="text-align:center; padding:3rem; color:#666;">
+        <i class="fas fa-check-circle" style="font-size: 2rem; color: #eee; margin-bottom: 1rem;"></i>
+        <p>No penalties recorded.</p>
+    </div>
+{% endfor %}
+</div>
+
+<div id="penaltyModal" class="modal-overlay">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3>Issue Penalty</h3>
+            <span style="font-size:1.5rem; cursor:pointer;" onclick="closeModal('penaltyModal')">&times;</span>
+        </div>
+        
+        <form method="POST" action="{% url 'finance:create_penalty' chama.id %}">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="form-label">Member</label>
+                <select name="user_id" class="form-input" required style="background-color: white; color: #333;">
+                    <option value="" disabled selected>-- Select Member --</option>
+                    {% for m in members %}
+                        <option value="{{ m.id }}">{{ m.name }}</option>
+                    {% empty %}
+                        <option value="" disabled>No active members found</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Amount (KES)</label>
+                <input type="number" name="amount" class="form-input" placeholder="0.00" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Reason</label>
+                <input type="text" name="reason" class="form-input" placeholder="e.g. Late contribution" required>
+            </div>
+
+            <button type="submit" class="btn-finance btn-full">Issue Penalty</button>
+        </form>
+    </div>
+</div>
+
+<div id="payPenaltyModal" class="modal-overlay">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h5 class="m-0" id="payModalTitle" style="font-weight:700;">Pay Penalty</h5>
+            <span style="font-size:1.5rem; cursor:pointer; color:#666;" onclick="closeModal('payPenaltyModal')">&times;</span>
+        </div>
+        
+        <form method="POST" action="{% url 'finance:create_contribution' chama.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="contribution_type" value="penalty">
+            <input type="hidden" name="penalty_id" id="target_penalty_id">
+
+            <div class="form-group mb-3">
+                <label class="form-label">Amount (KES)</label>
+                <input type="number" name="amount" id="pay_amount" class="form-input" readonly required>
+            </div>
+
+            <div class="form-group mb-4">
+                <label class="form-label">M-Pesa Phone Number</label>
+                <input type="text" name="phone" class="form-input" value="{{ user.user_phone_number }}" required>
+                <small style="color:#666; font-size:0.8rem;">Enter the number that will pay.</small>
+            </div>
+
+            <button type="submit" class="btn btn-success w-100 py-2" style="width:100%; padding:10px; background-color: var(--primary-green, #10B981); border:none; color:white; border-radius:6px; font-weight:bold;">
+                <i class="fas fa-check"></i> Initiate Payment
+            </button>
+        </form>
+    </div>
+</div>
+
+<div id="editPenaltyModal" class="modal-overlay">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3>Edit Penalty</h3>
+            <span style="font-size:1.5rem; cursor:pointer;" onclick="closeModal('editPenaltyModal')">&times;</span>
+        </div>
+        <form method="POST" id="editPenaltyForm">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Amount (KES)</label>
+                <input type="number" name="amount" id="editAmount" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Reason</label>
+                <input type="text" name="reason" id="editReason" class="form-input" required>
+            </div>
+            <button type="submit" class="btn-finance btn-full">Update Penalty</button>
+        </form>
+    </div>
+</div>
+
+<div id="deletePenaltyModal" class="modal-overlay">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3>Delete Penalty</h3>
+            <span style="font-size:1.5rem; cursor:pointer;" onclick="closeModal('deletePenaltyModal')">&times;</span>
+        </div>
+        <p style="color:#666; margin-bottom:1.5rem;">Are you sure you want to delete this penalty? This action cannot be undone.</p>
+        <div style="display:flex; gap:10px;">
+            <button type="button" class="btn-secondary-fin btn-full" onclick="closeModal('deletePenaltyModal')">Cancel</button>
+            <a href="#" id="confirmDeleteBtn" class="btn-finance btn-full" style="background-color:var(--danger); color:white; text-align:center; padding-top:12px; text-decoration:none;">Delete</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // General Close
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+    // General Open
+    function openModal(modalId) {
+        document.getElementById(modalId).style.display = 'flex';
+    }
+
+    // Pay Modal Logic
+    function openPayModal(penaltyId, reason, amount) {
+        document.getElementById('target_penalty_id').value = penaltyId;
+        document.getElementById('payModalTitle').innerText = "Pay: " + reason;
+        
+        // Clean and set amount
+        let cleanAmount = String(amount).replace(/,/g, '');
+        document.getElementById('pay_amount').value = parseFloat(cleanAmount).toFixed(2);
+        
+        openModal('payPenaltyModal');
+    }
+
+    // Edit Modal Logic
+    function openEditModal(id, amount, reason) {
+        document.getElementById('editAmount').value = amount;
+        document.getElementById('editReason').value = reason;
+        const form = document.getElementById('editPenaltyForm');
+        form.action = `/finance/penalty/edit/${id}/`; 
+        openModal('editPenaltyModal');
+    }
+
+    // Delete Modal Logic
+    function openDeleteModal(id) {
+        const btn = document.getElementById('confirmDeleteBtn');
+        btn.href = `/finance/penalty/delete/${id}/`; 
+        openModal('deletePenaltyModal');
+    }
+
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal-overlay')) {
+            event.target.style.display = 'none';
+        }
+    }
+</script>
+
+<style>
+    .btn-sm { padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; }
+    .btn-primary { background-color: var(--primary-green, #10B981); color: white; }
+    .form-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-top: 5px; }
+</style>
+
+{% endblock %}

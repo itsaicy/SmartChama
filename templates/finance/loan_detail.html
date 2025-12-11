@@ -1,0 +1,57 @@
+{% extends 'finance_base.html' %}
+{% block page_title %}Loan Details{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="text-align:center; padding:1rem 0;">
+        <div class="item-sub">Outstanding Balance</div>
+        <div style="font-size:2rem; font-weight:800; color:var(--primary-black);">KES {{ loan.loan_outstanding_balance }}</div>
+        <span class="status-badge status-{{ loan.loan_status }}">{{ loan.loan_status }}</span>
+    </div>
+    <hr style="border:0; border-top:1px solid #eee;">
+    <div class="list-item">
+        <span class="item-sub">Borrower</span>
+        <span class="item-main">{{ loan.loan_user.get_full_name }}</span>
+    </div>
+    <div class="list-item">
+        <span class="item-sub">Requested Amount</span>
+        <span class="item-main">KES {{ loan.loan_amount }}</span>
+    </div>
+    <div class="list-item">
+        <span class="item-sub">Interest</span>
+        <span class="item-main">{{ loan.loan_interest_rate }}%</span>
+    </div>
+    <div class="list-item">
+        <span class="item-sub">Total Payable</span>
+        <span class="item-main">KES {{ loan.loan_total_payable }}</span>
+    </div>
+    <div style="margin-top:1rem;">
+        <span class="item-sub">Purpose:</span>
+        <p style="background:#f9f9f9; padding:10px; border-radius:8px;">{{ loan.loan_purpose }}</p>
+    </div>
+</div>
+
+{% if loan.loan_status == 'pending' and membership.membership_role == 'treasurer' %}
+<div style="display:flex; gap:10px; margin-top:1rem;">
+    <form style="flex:1;" action="{% url 'finance:approve_loan' loan.id %}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="reject">
+        <button class="btn-secondary-fin btn-full" style="color:var(--danger);">Reject</button>
+    </form>
+    <form style="flex:1;" action="{% url 'finance:approve_loan' loan.id %}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="approve">
+        <button class="btn-finance btn-full">Approve</button>
+    </form>
+</div>
+{% endif %}
+
+{% if loan.loan_status == 'approved' and membership.membership_role == 'treasurer' %}
+<a href="{% url 'finance:disburse_loan' loan.id %}" class="btn-finance btn-full">Disburse Funds</a>
+{% endif %}
+
+{% if loan.loan_status == 'active' and loan.loan_user == user %}
+<a href="{% url 'finance:repay_loan' loan.id %}" class="btn-finance btn-full">Repay Loan</a>
+{% endif %}
+
+{% endblock %}

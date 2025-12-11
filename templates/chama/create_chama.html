@@ -1,65 +1,94 @@
 {% extends "chama/chama_base.html" %}
+{% load static %}
+
+{% block title %}Create Chama - SmartChama{% endblock %}
+
 {% block content %} 
 <div class="container">
-    <div class="box" style="max-width: 600px;"> 
+    <div class="box"> 
         <div class="top-header"> 
-            <h3>Create a New Chama</h3> 
-            <p class="description">Start your savings journey today.</p>
+            <h3>{% if edit_mode %}Edit Chama{% else %}Create a Chama{% endif %}</h3> 
         </div> 
-
+        
         <form method="post" enctype="multipart/form-data"> 
             {% csrf_token %} 
-            
-            <div class="input-field">
-                <label>Chama Name</label> 
-                {{ form.chama_name }} 
-            </div> 
-
-            <div class="input-field">
-                <label>Description</label> 
-                {{ form.chama_description }}
-            </div> 
-
-            <div style="display: flex; gap: 20px;">
-                <div class="input-field" style="flex:1;"> 
-                    <label>Amount (KES)</label> 
+            <div class="input-group"> 
+                <div class="input-field">
+                    <label for="{{ form.chama_name.id_for_label }}">Chama Name</label> 
+                    {{ form.chama_name }} 
+                </div> 
+                
+                <div class="input-field">
+                    <label for="{{ form.chama_description.id_for_label }}">Chama Description</label> 
+                    {{ form.chama_description }}
+                </div> 
+                
+                <div class="input-field"> 
+                    <label for="{{ form.chama_contribution_amount.id_for_label }}">Contribution Amount (KES)</label> 
                     {{ form.chama_contribution_amount }} 
                 </div>
-                <div class="input-field" style="flex:1;"> 
-                    <label>Max Members</label> 
+                
+                <div class="input-field"> 
+                    <label for="{{ form.chama_contribution_frequency.id_for_label }}">Contribution Frequency</label> 
+                    {{ form.chama_contribution_frequency }} 
+                </div> 
+                
+                <div class="input-field">
+                    <label for="{{ form.chama_custom_frequency_days.id_for_label }}">Custom Frequency (Days)</label> 
+                    {{ form.chama_custom_frequency_days }} 
+                    <small class="description">Only fill this if you selected "Custom" frequency</small>
+                </div> 
+                
+                <div class="input-field"> 
+                    <label for="{{ form.chama_max_members.id_for_label }}">Maximum Members</label> 
                     {{ form.chama_max_members }}
                 </div> 
-            </div>
-
-            <div class="input-field"> 
-                <label>Frequency</label> 
-                {{ form.chama_contribution_frequency }} 
+                
+                {% if payment_form %}
+                <!-- Payment Method Selection -->
+                <div class="input-field"> 
+                    <label for="{{ payment_form.chama_payment_method.id_for_label }}">Payment Method</label>
+                    {{ payment_form.chama_payment_method }} 
+                </div>
+                
+                <!-- Paybill Fields -->
+                <div class="input-field" id="paybill-number-field" style="display: none;">
+                    <label for="{{ payment_form.chama_paybill_number.id_for_label }}">Paybill Number</label>
+                    {{ payment_form.chama_paybill_number }}
+                </div>
+                
+                <div class="input-field" id="paybill-name-field" style="display: none;">
+                    <label for="{{ payment_form.chama_paybill_name.id_for_label }}">Paybill Name</label>
+                    {{ payment_form.chama_paybill_name }}
+                </div>
+                
+                <div class="input-field" id="paybill-account-field" style="display: none;">
+                    <label for="{{ payment_form.chama_paybill_account_number.id_for_label }}">Paybill Account Number</label>
+                    {{ payment_form.chama_paybill_account_number }}
+                </div>
+                
+                <!-- Till Fields -->
+                <div class="input-field" id="till-number-field" style="display: none;">
+                    <label for="{{ payment_form.chama_till_number.id_for_label }}">Till Number</label>
+                    {{ payment_form.chama_till_number }}
+                </div>
+                
+                <div class="input-field" id="till-name-field" style="display: none;">
+                    <label for="{{ payment_form.chama_till_name.id_for_label }}">Till Name</label>
+                    {{ payment_form.chama_till_name }}
+                </div>
+                {% endif %}
+                
+                <div class="input-field"> 
+                    <label for="{{ form.chama_rota_type.id_for_label }}">Rota Type</label>
+                    {{ form.chama_rota_type }} 
+                </div> 
+                
+                <div class="input-field"> 
+                    <input type="submit" class="submit" value="{% if edit_mode %}Update Chama{% else %}Create Chama{% endif %}"> 
+                </div> 
             </div> 
-            
-            <div class="input-field"> 
-                <label>Payment Method</label>
-                {{ payment_form.chama_payment_method }} 
-            </div>
-            
-            <div id="payment-details-section" style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; display:none;">
-                <div class="input-field paybill-field">
-                    <label>Paybill Number</label> {{ payment_form.chama_paybill_number }}
-                </div>
-                <div class="input-field paybill-field">
-                    <label>Account Number</label> {{ payment_form.chama_paybill_account_number }}
-                </div>
-                <div class="input-field till-field">
-                    <label>Till Number</label> {{ payment_form.chama_till_number }}
-                </div>
-            </div>
-
-            <div class="input-field"> 
-                <label>Rota Type</label>
-                {{ form.chama_rota_type }} 
-            </div> 
-            
-            <input type="submit" class="submit" value="Create Chama"> 
         </form> 
     </div> 
 </div>
-{% endblock content %}
+{% endblock %}

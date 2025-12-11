@@ -123,7 +123,7 @@ def download_full_report(request, chama_id):
             "Contribution Cycle",
             "Everyone",
             cycle.cycle_amount_required,
-            f"{cycle.cycle_start_date} to {cycle.cycle_end_date}",
+            f"{cycle.cycle_created_at} to {cycle.cycle_deadline}",
             cycle.cycle_status,
             f"Name: {cycle.cycle_name}"
         ])
@@ -184,7 +184,7 @@ def download_full_report(request, chama_id):
             "",
             meeting.meeting_date.strftime("%Y-%m-%d"),
             meeting.meeting_status,
-            f"Title: {meeting.meeting_title} | Location: {meeting.meeting_location}"
+            f"Title: {meeting.meeting_title} | Location: {meeting.meeting_venue}"
         ])
         # We also query Attendance directly to avoid similar relationship errors
         for att in MeetingAttendance.objects.filter(attendance_meeting=meeting):
