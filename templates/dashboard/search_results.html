@@ -1,0 +1,97 @@
+{% extends 'dashboard/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Search Results - {{ chama.chama_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold text-dark">Search Results</h5>
+        <a href="{% url 'dashboard:dashboard' %}" class="btn btn-light btn-sm border"><i class="fas fa-arrow-left me-2"></i>Back to Dashboard</a>
+    </div>
+
+    {% if query %}
+        <p class="text-muted mb-4">Showing results for: <span class="fw-bold text-primary">"{{ query }}"</span></p>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="fas fa-users me-2 text-warning"></i>Members Found ({{ member_results|length }})</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if member_results %}
+                    <div class="list-group list-group-flush">
+                        {% for member in member_results %}
+                        <div class="list-group-item px-4 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    {% if member.membership_user.user_profile_picture %}
+                                        <img src="{{ member.membership_user.user_profile_picture.url }}" class="rounded-circle object-fit-cover" width="50" height="50">
+                                    {% else %}
+                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center fw-bold text-secondary" style="width: 50px; height: 50px;">
+                                            {{ member.membership_user.user_first_name|slice:":1" }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0 fw-bold text-dark">{{ member.membership_user.get_full_name }}</h6>
+                                    <small class="badge bg-secondary-subtle text-secondary rounded-pill">{{ member.membership_role|title }}</small>
+                                    
+                                    {% if is_official %}
+                                        <div class="mt-1 small text-muted">
+                                            <span class="me-3"><i class="fas fa-envelope me-1"></i> {{ member.membership_user.user_email }}</span>
+                                            <span><i class="fas fa-phone me-1"></i> {{ member.membership_user.user_phone_number }}</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div>
+                                    {% if is_official %}
+                                        <a href="#" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i> Edit</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="p-4 text-center text-muted">
+                        No members found matching "{{ query }}".
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="fas fa-calendar-alt me-2 text-primary"></i>Meetings Found ({{ meeting_results|length }})</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if meeting_results %}
+                    <div class="list-group list-group-flush">
+                        {% for meeting in meeting_results %}
+                        <a href="#" class="list-group-item list-group-item-action px-4 py-3">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1 fw-bold text-primary">{{ meeting.meeting_title }}</h6>
+                                <small class="text-muted">{{ meeting.meeting_date|date:"M d, Y" }}</small>
+                            </div>
+                            <p class="mb-1 small text-muted">{{ meeting.meeting_description|truncatewords:20 }}</p>
+                            <small class="text-info"><i class="fas fa-map-marker-alt me-1"></i> {{ meeting.meeting_location }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="p-4 text-center text-muted">
+                        No meetings found matching "{{ query }}".
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    {% else %}
+        <div class="alert alert-info">
+            Please enter a keyword to search.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

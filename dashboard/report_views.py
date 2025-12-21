@@ -57,11 +57,12 @@ def download_financial_report(request, chama_id):
 
     # 3. Loan Repayments
     for lr in LoanRepayment.objects.filter(loan_repayment_loan__loan_chama=chama):
+        # FIX: Changed loan_repayment_date to loan_repayment_time
         writer.writerow([
             "Loan Repayment",
             get_member_name(lr.loan_repayment_loan.loan_user),
             lr.loan_repayment_amount,
-            lr.loan_repayment_date.strftime("%Y-%m-%d"),
+            lr.loan_repayment_time.strftime("%Y-%m-%d"), 
             "Paid",
             f"Repayment for Loan ID {lr.loan_repayment_loan.id}"
         ])
@@ -123,7 +124,7 @@ def download_full_report(request, chama_id):
             "Contribution Cycle",
             "Everyone",
             cycle.cycle_amount_required,
-            f"{cycle.cycle_created_at} to {cycle.cycle_deadline}",
+            f"{cycle.cycle_created_at.strftime('%Y-%m-%d')} to {cycle.cycle_deadline}",
             cycle.cycle_status,
             f"Name: {cycle.cycle_name}"
         ])
@@ -142,6 +143,7 @@ def download_full_report(request, chama_id):
 
     # --- 4. LOANS & REPAYMENTS ---
     for l in Loan.objects.filter(loan_chama=chama):
+
         writer.writerow([
             "Financial", 
             "Loan Issued", 
@@ -149,17 +151,18 @@ def download_full_report(request, chama_id):
             l.loan_amount, 
             l.loan_created_at.strftime("%Y-%m-%d"),
             l.loan_status, 
-            f"Due: {l.loan_due_date} | Outstanding: {l.loan_outstanding_balance}"
+            f"Due: {l.loan_deadline} | Outstanding: {l.loan_outstanding_balance}"
         ])
         for lr in LoanRepayment.objects.filter(loan_repayment_loan=l):
+            
             writer.writerow([
                 "Financial",
                 "Loan Repayment",
                 get_member_name(l.loan_user),
                 lr.loan_repayment_amount,
-                lr.loan_repayment_date.strftime("%Y-%m-%d"),
+                lr.loan_repayment_time.strftime("%Y-%m-%d"),
                 "Success",
-                f"Paid via {lr.loan_repayment_method}"
+                f"Ref: {lr.loan_repayment_reference or 'N/A'}"
             ])
 
     # --- 5. PENALTIES ---
@@ -174,8 +177,7 @@ def download_full_report(request, chama_id):
             p.penalty_reason
         ])
 
-    # --- 6. MEETINGS & ATTENDANCE (FIXED) ---
-    # We query Meeting objects directly instead of using chama.meeting_set
+    # --- 6. MEETINGS & ATTENDANCE ---
     for meeting in Meeting.objects.filter(meeting_chama=chama):
         writer.writerow([
             "Operations",
@@ -186,7 +188,6 @@ def download_full_report(request, chama_id):
             meeting.meeting_status,
             f"Title: {meeting.meeting_title} | Location: {meeting.meeting_venue}"
         ])
-        # We also query Attendance directly to avoid similar relationship errors
         for att in MeetingAttendance.objects.filter(attendance_meeting=meeting):
             writer.writerow([
                 "Operations",

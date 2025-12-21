@@ -5,8 +5,9 @@ from django.views.generic import DetailView, UpdateView, DeleteView, ListView
 from django.contrib import messages
 from django.http import JsonResponse, Http404
 from django.db.models import Q
+from django.core.mail import send_mail
+from django.conf import settings as django_settings 
 from django.urls import reverse_lazy
-
 from .models import Notification, NotificationReply, NotificationDeliveryLog, UserNotificationSettings
 from chama.models import Chama, Membership
 from notification.forms import NotificationForm
@@ -158,7 +159,7 @@ def notification_reply(request, id):
     return redirect("notification:notification_detail", pk=id)
 
 # -----------------------------------------------------
-# 4. CREATE NOTIFICATION
+# 4. CREATE NOTIFICATION (FIXED: NOW SENDS EMAILS)
 # -----------------------------------------------------
 @login_required
 def create_notification(request, chama_id):
@@ -183,27 +184,57 @@ def create_notification(request, chama_id):
                 memberships = Membership.objects.filter(id__in=target_ids, membership_chama=chama)
 
             count = 0
+            email_count = 0
+            
             for membership in memberships:
                 recipient = membership.membership_user
-                settings, _ = UserNotificationSettings.objects.get_or_create(user_notification_settings_user=recipient)
+                user_settings, _ = UserNotificationSettings.objects.get_or_create(user_notification_settings_user=recipient)
 
-                if settings.user_notification_settings_allow_inapp or settings.user_notification_settings_fallback:
-                    notif = Notification.objects.create(
-                        notification_user=recipient,
-                        notification_chama=chama,
-                        notification_title=data['notification_title'],
-                        notification_message=data['notification_message'],
-                        notification_type=data['notification_type'],
-                        notification_priority=data['notification_priority'],
-                        notification_sender=request.user
-                    )
-                    NotificationDeliveryLog.objects.create(
-                        notification=notif, member=recipient,
-                        delivery_method='inapp', notification_status='sent'
-                    )
+                # 1. ALWAYS Create In-App Notification (Database Record)
+                notif = Notification.objects.create(
+                    notification_user=recipient,
+                    notification_chama=chama,
+                    notification_title=data['notification_title'],
+                    notification_message=data['notification_message'],
+                    notification_type=data['notification_type'],
+                    notification_priority=data['notification_priority'],
+                    notification_sender=request.user
+                )
+                
+                # Log In-App delivery
+                NotificationDeliveryLog.objects.create(
+                    notification=notif, member=recipient,
+                    delivery_method='inapp', notification_status='sent'
+                )
                 count += 1
 
-            messages.success(request, f"Sent to {count} members.")
+                # 2. CHECK & SEND EMAIL
+                if user_settings.user_notification_settings_allow_email and recipient.email:
+                    try:
+                        send_mail(
+                            subject=f"[{chama.chama_name}] {data['notification_title']}",
+                            message=data['notification_message'],
+                            from_email=django_settings.EMAIL_HOST_USER, # defined in settings.py
+                            recipient_list=[recipient.email],
+                            fail_silently=False,
+                        )
+                        
+                        # Log Email delivery success
+                        NotificationDeliveryLog.objects.create(
+                            notification=notif, member=recipient,
+                            delivery_method='email', notification_status='sent'
+                        )
+                        email_count += 1
+                        
+                    except Exception as e:
+                        # Log Email delivery failure
+                        print(f"Email Error: {e}")
+                        NotificationDeliveryLog.objects.create(
+                            notification=notif, member=recipient,
+                            delivery_method='email', notification_status='failed'
+                        )
+
+            messages.success(request, f"Notification sent to {count} members ({email_count} via email).")
             return redirect("notification:chama_notifications", chama_id=chama.id)
     else:
         form = NotificationForm()

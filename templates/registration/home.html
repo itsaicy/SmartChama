@@ -1,14 +1,35 @@
-{% extends "registration/base.html" %}
+{% extends 'dashboard/dashboard_base.html' %}
+
+{% block title %}Welcome | SmartChama{% endblock %}
+{% block header %}Get Started{% endblock %}
+
 {% block content %}
 {% if messages %}
-  <div class="container mt-3">
+  <div id="message-container">
     {% for message in messages %}
-      <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="fa-solid fa-circle-check me-2"></i> {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      </div>
+      {% ifchanged message %}
+        <div class="alert alert-success">{{ message }}</div>
+      {% endifchanged %}
     {% endfor %}
   </div>
 {% endif %}
 
-{% endblock content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="welcome-card p-5 text-center bg-white shadow rounded">
+      <h2 class="text-success fw-bold">Welcome to SmartChama 🎉</h2>
+      <p class="text-muted mt-3">
+        You’re not yet part of any chama. SmartChama helps you collaborate, save, and grow together.
+      </p>
+      <div class="d-flex justify-content-center gap-3 mt-4">
+        <a href="{% url 'chama:create_chama' %}" class="btn btn-success">
+          Start a New Chama
+        </a>
+        <a href="{% url 'chama:chama_list' %}" class="btn btn-outline-primary">
+          Explore Existing Chamas
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

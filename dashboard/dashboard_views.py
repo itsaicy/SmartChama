@@ -1,4 +1,5 @@
 import csv
+import json
 from datetime import timedelta
 from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
@@ -7,7 +8,6 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseForbidden
 from django.db.models import Sum, Count, Q
-import json
 from django.db.models.functions import TruncMonth
 from user.models import User
 from chama.models import Membership, Chama, JoinRequest
@@ -46,67 +46,113 @@ def dashboard(request):
 @login_required
 def dashboard_search(request, chama_id):
     """
-    Global search within the dashboard context.
+    Role-based search:
+    - Officials: Search Members (Full Details) & Meetings
+    - Members: Search Members (Name/Profile Only) & Meetings
     """
     chama = get_object_or_404(Chama, id=chama_id)
     query = request.GET.get('q')
-    memberships = Membership.objects.filter(membership_chama=chama, membership_status='active')
+    
+    # 1. Determine User Role
+    user_membership = Membership.objects.filter(
+        membership_user=request.user, 
+        membership_chama=chama,
+        membership_status='active'
+    ).first()
+    
+    # Default to 'member' if something goes wrong, otherwise use actual role
+    role = user_membership.membership_role.lower() if user_membership else 'member'
+    is_official = role in ['admin', 'treasurer', 'secretary', 'chairman']
+    
+    member_results = []
+    meeting_results = []
     
     if query:
-        memberships = memberships.filter(
-            Q(membership_user__user_first_name__icontains=query) |
-            Q(membership_user__user_last_name__icontains=query) |
-            Q(membership_user__user_email__icontains=query) |
-            Q(membership_user__user_phone_number__icontains=query)
-        )
+        # --- SEARCH MEMBERS ---
+        # Base query: Active members in this chama
+        member_qs = Membership.objects.filter(
+            membership_chama=chama, 
+            membership_status='active'
+        ).select_related('membership_user')
+        
+        # Name search (Allowed for everyone)
+        name_filter = Q(membership_user__user_first_name__icontains=query) | \
+                      Q(membership_user__user_last_name__icontains=query)
+        
+        if is_official:
+            # Officials can ALSO search by Email and Phone
+            contact_filter = Q(membership_user__user_email__icontains=query) | \
+                             Q(membership_user__user_phone_number__icontains=query)
+            member_results = member_qs.filter(name_filter | contact_filter)
+        else:
+            # Regular members can ONLY search by Name
+            member_results = member_qs.filter(name_filter)
+
+        # --- SEARCH MEETINGS (Allowed for everyone) ---
+        meeting_results = Meeting.objects.filter(
+            meeting_chama=chama,
+            meeting_title__icontains=query
+        ).order_by('-meeting_date')
+
+    # FIX: Get memberships for Switch Role dropdown in search results too
+    memberships = Membership.objects.filter(
+        membership_user=request.user,
+        membership_status="active"
+    ).select_related("membership_chama")
     
     context = {
         "chama": chama,
-        "results": memberships,
-        "query": query
+        "query": query,
+        "member_results": member_results,
+        "meeting_results": meeting_results,
+        "is_official": is_official,
+        "active_role": role,
+        "chama_with_roles": memberships, # Added for Switch Roles
     }
-    # Add notifications to context
-    active_chama = Chama.objects.filter(id=chama_id).first()
-    context.update(get_notification_context(request.user, active_chama))
+    
+    context.update(get_notification_context(request.user, chama))
+    
     return render(request, "dashboard/search_results.html", context)
-
 
 @login_required
 def switch_role(request, chama_id, role):
     """
     Context switcher: Updates session variables to change the user's current 'Active Chama' and 'Role'.
     """
+    # Verify membership exists for this user, chama, and role
     membership = Membership.objects.filter(
         membership_user=request.user,
         membership_chama_id=chama_id,
-        membership_role=role,
+        membership_role__iexact=role,   # case-insensitive match
         membership_status='active'
-    ).first()
+    ).select_related("membership_chama").first()
 
     if not membership:
         messages.error(request, "You don't have that role in this chama.")
         return redirect('dashboard:dashboard')
 
     # Save active session context
-    request.session['active_chama_id'] = chama_id
+    request.session['active_chama_id'] = membership.membership_chama.id
     request.session['active_chama_name'] = membership.membership_chama.chama_name
-    request.session['active_role'] = role
+    request.session['active_role'] = membership.membership_role.lower()
 
     messages.success(
         request,
-        f"Switched to {role.title()} role in {membership.membership_chama.chama_name}"
+        f"Switched to {membership.membership_role.title()} role in {membership.membership_chama.chama_name}"
     )
 
-    # Redirect based on role
-    if role == "admin":
-        return redirect("dashboard:admin_dashboard", chama_id=chama_id)
-    elif role == "treasurer":
-        return redirect("dashboard:treasurer_dashboard", chama_id=chama_id)
-    elif role == "secretary":
-        return redirect("dashboard:secretary_dashboard", chama_id=chama_id)
-    else:
-        return redirect("dashboard:member_dashboard", chama_id=chama_id)
+    # Role → dashboard mapping
+    role_redirects = {
+        "admin": "dashboard:admin_dashboard",
+        "treasurer": "dashboard:treasurer_dashboard",
+        "secretary": "dashboard:secretary_dashboard",
+        "member": "dashboard:member_dashboard",
+    }
 
+    # Default fallback if role not in mapping
+    redirect_view = role_redirects.get(membership.membership_role.lower(), "dashboard:dashboard")
+
+    return redirect(redirect_view, chama_id=membership.membership_chama.id)
 
 # ==========================================
 #              MEMBER DASHBOARD
@@ -134,6 +180,12 @@ def member_dashboard(request, chama_id=None):
             context = {"error": "No Chama Selected"}
             context.update(get_notification_context(request.user, active_chama))
             return render(request, "dashboard/member_dashboard.html", context)
+            
+    # FIX: Get memberships for Switch Role dropdown
+    memberships = Membership.objects.filter(
+        membership_user=request.user,
+        membership_status="active"
+    ).select_related("membership_chama")
 
     # 3. --- CARDS DATA ---
 
@@ -234,6 +286,7 @@ def member_dashboard(request, chama_id=None):
     context = {
         "active_chama": active_chama,
         "active_role": active_role,
+        "chama_with_roles": memberships, # Added for Switch Roles
         
         # Cards Data
         "contrib_status": contrib_status,
@@ -347,7 +400,6 @@ def get_recent_activity(chama, limit=4):
     activities.sort(key=lambda x: x['timestamp'], reverse=True)
     return activities[:limit]
 
-
 @login_required
 def admin_dashboard(request, chama_id=None):
     # Get all user's memberships with their roles
@@ -361,11 +413,10 @@ def admin_dashboard(request, chama_id=None):
     active_chama = None
     active_role = None
 
+    # Logic to determine the Active Chama
     if chama_id:
         chama_id = int(chama_id)
-        if chama_id not in user_chamas:
-            pass 
-        else:
+        if chama_id in user_chamas:
             active_chama = Chama.objects.get(id=chama_id)
             membership = Membership.objects.filter(
                 membership_chama=active_chama,
@@ -373,8 +424,8 @@ def admin_dashboard(request, chama_id=None):
             ).first()
             active_role = membership.membership_role if membership else None
     
-    # If user has only one chama and no ID is provided, set it as active
-    if active_chama is None and len(user_chamas) == 1:
+    # Fallback: If no specific ID, default to the first available chama
+    if active_chama is None and len(user_chamas) >= 1:
         active_chama = Chama.objects.get(id=user_chamas[0])
         membership = Membership.objects.filter(
             membership_chama=active_chama,
@@ -382,13 +433,13 @@ def admin_dashboard(request, chama_id=None):
         ).first()
         active_role = membership.membership_role if membership else None
     
-    # Redirect if context is missing/invalid after checks
+    # Error handling if context is still missing
     if active_chama is None:
         context = {"error": "You do not belong to this chama or no chama is selected."}
         context.update(get_notification_context(request.user, None))
         return render(request, "dashboard/admin_dashboard.html", context)
         
-    # --- Calculate Metrics ---
+    # --- Calculate Metrics for Cards ---
 
     # 1. Total Members
     total_members = Membership.objects.filter(
@@ -403,7 +454,7 @@ def admin_dashboard(request, chama_id=None):
     )
     total_contributions = contributions_qs.aggregate(total=Sum("contribution_amount"))["total"] or 0
 
-    # 3. Pending Contributions (by type)
+    # 3. Pending Contributions (Attention Card)
     pending_contributions_regular = Contribution.objects.filter(
         contribution_chama=active_chama,
         contribution_status="pending",
@@ -412,7 +463,7 @@ def admin_dashboard(request, chama_id=None):
     pending_regular_count = pending_contributions_regular.count()
     pending_regular_amount = pending_contributions_regular.aggregate(total=Sum("contribution_amount"))["total"] or 0
 
-    # 4. Pending Loan Requests
+    # 4. Pending Loan Requests (Attention Card)
     pending_loan_requests = Loan.objects.filter(
         loan_chama=active_chama,
         loan_status="pending"
@@ -426,40 +477,51 @@ def admin_dashboard(request, chama_id=None):
         transaction_created_at__date=today
     )
     stk_success = today_tx.filter(transaction_status="success").count()
-    stk_failed = today_tx.filter(transaction_status="failed").count()
+    stk_failed = today_tx.filter(transaction_status__in=['failed', 'cancelled']).count()
     stk_pending = today_tx.filter(transaction_status="pending").count()
 
-    # 6. Penalties Overview
+    # 6. Penalties Overview (Pink Card)
     all_penalties_qs = Penalty.objects.filter(penalty_chama=active_chama)
     unpaid_penalties = all_penalties_qs.filter(penalty_paid=False)
     total_penalty_amount = all_penalties_qs.aggregate(total=Sum("penalty_amount"))["total"] or 0
     unpaid_penalty_amount = unpaid_penalties.aggregate(total=Sum("penalty_amount"))["total"] or 0
     unpaid_penalty_count = unpaid_penalties.count()
 
-    # 7. Contribution History (Last 6 Months)
+    # 7. Contribution History (Last 6 Months - FIXED FOR CHART)
     six_months_ago = timezone.now() - timedelta(days=180)
-    contributions_history = (
-        contributions_qs.filter(contribution_time__gte=six_months_ago)
-        .annotate(month=TruncMonth('contribution_time'))
+    
+    # We query the database for monthly totals
+    history_queryset = (
+        contributions_qs.filter(contribution_created_at__gte=six_months_ago)
+        .annotate(month=TruncMonth('contribution_created_at'))
         .values("month")
         .annotate(total=Sum("contribution_amount"))
         .order_by("month")
     )
-    contributions_history_list = list(contributions_history)
+    
+    # SERIALIZATION FIX: Convert QuerySet to a clean list of dictionaries
+    # This prevents "Decimal not serializable" errors in JavaScript
+    contributions_history_list = []
+    for entry in history_queryset:
+        if entry['month']:
+            contributions_history_list.append({
+                "month": entry['month'].strftime("%Y-%m-%d"), # Convert Date to String
+                "total": float(entry['total'])                # Convert Decimal to Float
+            })
 
-    # 8. Progress Toward Chama Target
+    # 8. Progress Toward Chama Target (Green Card)
     target = active_chama.chama_target_amount
     collected = total_contributions
     progress_percent = (collected / target * 100) if target > 0 else 0
 
-    # 9. Pending Join Requests (For validation)
+    # 9. Pending Join Requests (Side Nav Badge)
     pending_join_requests = JoinRequest.objects.filter(
         join_request_chama=active_chama,
         join_request_status="pending"
     )
     pending_join_count = pending_join_requests.count()
 
-    # 10. Recent Activity (NEW)
+    # 10. Recent Activity (List Widget)
     recent_activities = get_recent_activity(active_chama, limit=4)
 
     context = {
@@ -467,7 +529,7 @@ def admin_dashboard(request, chama_id=None):
         "active_role": active_role,
         "chama_with_roles": memberships,
         
-        # --- CARDS DATA (Only what's needed) ---
+        # --- CARDS DATA ---
         "total_members": total_members,
         "total_contributions": total_contributions,
         
@@ -489,7 +551,7 @@ def admin_dashboard(request, chama_id=None):
         "unpaid_penalty_amount": unpaid_penalty_amount,
         "unpaid_penalty_count": unpaid_penalty_count,
         
-        # Contribution History (Last 6 Months) - For Chart
+        # Contribution History (Serialized List for Chart)
         "contributions_history": contributions_history_list,
         
         # Progress Toward Chama Target Card
@@ -497,15 +559,16 @@ def admin_dashboard(request, chama_id=None):
         "collected": collected,
         "progress_percent": progress_percent,
         
-        # Join Requests (for validation/debugging)
+        # Join Requests
         "pending_join_count": pending_join_count,
         
-        # Recent Activity (NEW)
+        # Recent Activity
         "recent_activities": recent_activities,
     }
     
     context.update(get_notification_context(request.user, active_chama))
     return render(request, "dashboard/admin_dashboard.html", context)
+
 
 
 @login_required
@@ -704,70 +767,135 @@ def download_report(request, chama_id, report_type):
 @login_required
 def treasurer_dashboard(request, chama_id):
     chama = get_object_or_404(Chama, id=chama_id)
-    active_chama = chama # Alias for consistency
+    active_chama = chama  # alias
 
-    # --- 1. Total Funds ---
-    month = request.GET.get("month")  # dropdown filter
-    contributions_qs = Contribution.objects.filter(contribution_chama=chama, contribution_status="success")
+    # Switch Roles dropdown
+    memberships = Membership.objects.filter(
+        membership_user=request.user,
+        membership_status="active"
+    ).select_related("membership_chama")
+
+    # 1) Total funds (with optional month filter)
+    month = request.GET.get("month")
+    contributions_qs = Contribution.objects.filter(
+        contribution_chama=chama,
+        contribution_status="success"
+    )
     if month:
         contributions_qs = contributions_qs.filter(contribution_time__month=month)
-    total_funds = contributions_qs.aggregate(total=Sum("contribution_amount"))["total"] or 0
-    
-    member_contributions = contributions_qs.values("contribution_user__user_first_name").annotate(
-        total=Sum("contribution_amount")
-    )
 
-    # --- 2. Goal Progress ---
+    total_funds = contributions_qs.aggregate(total=Sum("contribution_amount"))["total"] or 0
+
+    member_contributions = contributions_qs.values(
+        "contribution_user__user_first_name"
+    ).annotate(total=Sum("contribution_amount"))
+
+    # 2) Goal progress
     collected = total_funds
     target = chama.chama_target_amount
     progress_percent = (collected / target * 100) if target > 0 else 0
 
-    # --- 3. Pending / Overdue Contributions ---
-    cycle = ContributionCycle.objects.filter(cycle_chama=chama, cycle_status="open").last()
-    pending_members = Membership.objects.filter(membership_chama=chama, membership_status="active").exclude(
+    # 3) Current cycle + pending
+    cycle = ContributionCycle.objects.filter(
+        cycle_chama=chama, cycle_status="open"
+    ).last()
+
+    # Members who have NOT contributed (pending in current filter scope)
+    pending_members = Membership.objects.filter(
+        membership_chama=chama,
+        membership_status="active"
+    ).exclude(
         membership_user__in=contributions_qs.values("contribution_user")
     )
     pending_count = pending_members.count()
-    pending_amount = pending_count * (cycle.cycle_amount_required if cycle else chama.chama_contribution_amount)
 
-    # --- 4. Pending Loans ---
+    # Expected pending amount (prefer cycle amount if available)
+    per_member_amount = (
+        getattr(cycle, "cycle_amount_required", None)
+        if cycle else None
+    )
+    if per_member_amount is None:
+        # fallback to chama default contribution amount
+        per_member_amount = getattr(chama, "chama_contribution_amount", 0)
+    pending_amount = pending_count * (per_member_amount or 0)
+
+    # 4) Loans (pending + active and repayment progress)
     pending_loans = Loan.objects.filter(loan_chama=chama, loan_status="pending")
 
-    # --- 5. Active Loans ---
     active_loans = Loan.objects.filter(loan_chama=chama, loan_status="active")
     active_loans_count = active_loans.count()
     total_loaned = active_loans.aggregate(total=Sum("loan_amount"))["total"] or 0
     total_outstanding = active_loans.aggregate(total=Sum("loan_outstanding_balance"))["total"] or 0
-    repayment_progress = (total_loaned - total_outstanding) / total_loaned * 100 if total_loaned > 0 else 0
+    repayment_progress = (
+        (total_loaned - total_outstanding) / total_loaned * 100
+        if total_loaned > 0 else 0
+    )
 
-    # --- 6. Penalties ---
+    # 5) Penalties (global counts)
     penalties = Penalty.objects.filter(penalty_chama=chama)
     missed_payments = penalties.filter(penalty_reason__icontains="missed").count()
     loan_defaults = penalties.filter(penalty_reason__icontains="default").count()
     total_penalties = penalties.aggregate(total=Sum("penalty_amount"))["total"] or 0
 
-    # --- 7. STK Monitor (Today’s Transactions) ---
+    # 6) STK monitor (today)
     today = timezone.now().date()
-    today_tx = Transaction.objects.filter(transaction_chama=chama, transaction_created_at__date=today)
+    today_tx = Transaction.objects.filter(
+        transaction_chama=chama,
+        transaction_created_at__date=today
+    )
     stk_success = today_tx.filter(transaction_status="success").count()
     stk_failed = today_tx.filter(transaction_status="failed").count()
 
-    # --- 8. Charts ---
+    # 7) Contribution history (last 6 months)
     six_months_ago = timezone.now() - timedelta(days=180)
     contributions_history = (
         contributions_qs.filter(contribution_time__gte=six_months_ago)
         .values("contribution_time__month")
         .annotate(total=Sum("contribution_amount"))
+        .order_by("contribution_time__month")
     )
 
-    # Pie chart: cycle status
-    # Note: Using contribution count (paid) and penalty count (overdue) as proxies here.
-    paid = contributions_qs.count() 
-    pending = pending_count
-    overdue = penalties.count()
+    # 8) Cycle status (Paid / Pending / Overdue)
+    # Paid: contributions in the current open cycle (if Contribution has contribution_cycle)
+    if cycle:
+        cycle_contributions = Contribution.objects.filter(
+            contribution_chama=chama,
+            contribution_status="success",
+            contribution_cycle=cycle  # ensure this field exists on Contribution
+        )
+        paid = cycle_contributions.count()
+
+        # Pending: active members who haven't contributed in current cycle
+        pending = Membership.objects.filter(
+            membership_chama=chama,
+            membership_status="active"
+        ).exclude(
+            membership_user__in=cycle_contributions.values("contribution_user")
+        ).count()
+
+        # Overdue: missed penalties during/after this cycle window (safe, field-agnostic)
+        # If your cycle model has a due date (e.g., cycle_due_date), use it to bound overdue:
+        # Otherwise, fall back to all "missed" penalties in the chama.
+        cycle_due_field = getattr(cycle, "cycle_due_date", None)
+        if cycle_due_field:
+            overdue = Penalty.objects.filter(
+                penalty_chama=chama,
+                penalty_reason__icontains="missed",
+                penalty_created_at__gte=cycle_due_field  # after due date considered overdue
+            ).count()
+        else:
+            overdue = missed_payments  # fallback to global missed penalties in the chama
+    else:
+        paid = 0
+        pending = pending_count  # when no open cycle, show pending from current filter scope
+        overdue = missed_payments  # global missed penalties fallback
+
+    cycle_status = {"paid": paid, "pending": pending, "overdue": overdue}
 
     context = {
         "chama": chama,
+        "active_chama": chama,
+        "active_role": "treasurer",
         "total_funds": total_funds,
         "member_contributions": member_contributions,
         "collected": collected,
@@ -786,11 +914,11 @@ def treasurer_dashboard(request, chama_id):
         "stk_success": stk_success,
         "stk_failed": stk_failed,
         "contributions_history": list(contributions_history),
-        "cycle_status": {"paid": paid, "pending": pending, "overdue": overdue},
+        "cycle_status": cycle_status,
+        "chama_with_roles": memberships,
     }
     context.update(get_notification_context(request.user, active_chama))
     return render(request, "dashboard/treasurer_dashboard.html", context)
-
 
 # ==========================================
 #           SECRETARY DASHBOARD
@@ -811,6 +939,12 @@ def secretary_dashboard(request, chama_id):
 
     if membership.membership_role != "secretary":
         return HttpResponseForbidden("Not allowed.")
+        
+    # FIX: Get memberships for Switch Role dropdown
+    memberships = Membership.objects.filter(
+        membership_user=request.user,
+        membership_status="active"
+    ).select_related("membership_chama")
 
     # Total members
     total_members = Membership.objects.filter(membership_chama=chama).count()
@@ -850,15 +984,18 @@ def secretary_dashboard(request, chama_id):
 
     context = {
         "chama": chama,
+        "active_chama": chama,
+        "active_role": "secretary",
         "total_members": total_members,
         "active_members": active_members,
         "inactive_members": inactive_members,
         "new_members_this_month": new_members_this_month,
         "upcoming_meetings": upcoming_meetings,
         "avg_attendance": avg_attendance,
-        "active_percentage": active_percentage, # <-- NEW CONTEXT VARIABLE
-        "join_requests": join_requests, # Ensure join_requests is passed for the card
-        "now": now, # Pass 'now' for the new members month display
+        "active_percentage": active_percentage, 
+        "join_requests": join_requests, 
+        "now": now, 
+        "chama_with_roles": memberships, 
     }
     context.update(get_notification_context(request.user, active_chama))
     return render(request, "dashboard/secretary_dashboard.html", context)

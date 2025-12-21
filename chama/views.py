@@ -380,7 +380,6 @@ def add_member_to_chama(request, chama_id):
         else:
             # ==================================================
             # CASE 2: NEW USER (NOT REGISTERED)
-            # We create them, generate a password, and email it.
             # ==================================================
             try:
                 # 1. Generate Random Password

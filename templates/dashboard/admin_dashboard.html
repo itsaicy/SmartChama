@@ -1,163 +1,203 @@
 {% extends 'dashboard/dashboard_base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block title %}Admin Dashboard - {{ active_chama.chama_name }}{% endblock %}
-{% block header %}Admin Dashboard - {{ active_chama.chama_name }}{% endblock %}
+{% block header %}Admin Dashboard{% endblock %}
 
 {% block content %}
-<!-- Metrics Cards Grid -->
-<div class="row g-4 mb-4">
-    <!-- 1. Total Members -->
-    <div class="col-xl-3 col-lg-4 col-md-6">
-        <div class="card-metric card-top-accent">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-                <div>
-                    <p class="text-muted small mb-1">TOTAL MEMBERS</p>
-                    <h2 class="fw-bold mb-0">{{ total_members }}</h2>
-                </div>
-                <div class="icon-box bg-light text-primary">
-                    <i class="fas fa-users"></i>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- 2. Total Contributions -->
-    <div class="col-xl-3 col-lg-4 col-md-6">
-        <div class="card-metric card-top-accent">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-                <div>
-                    <p class="text-muted small mb-1">TOTAL CONTRIBUTIONS</p>
-                    <h2 class="fw-bold mb-0">Ksh {{ total_contributions|floatformat:0 }}</h2>
-                </div>
-                <div class="icon-box bg-light text-success">
-                    <i class="fas fa-hand-holding-usd"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. Pending Contributions -->
-    <div class="col-xl-3 col-lg-4 col-md-6">
-        <div class="card-metric card-top-accent">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-                <div>
-                    <p class="text-muted small mb-1">PENDING CONTRIBUTIONS</p>
-                    <h2 class="fw-bold mb-0">{{ pending_regular_count }}</h2>
-                    <p class="text-muted small mb-0">Expected: Ksh {{ pending_regular_amount|floatformat:0 }}</p>
-                </div>
-                <div class="icon-box bg-light text-danger">
-                    <i class="fas fa-users-slash"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 4. Pending Loan Requests -->
-    <div class="col-xl-3 col-lg-4 col-md-6">
-        <div class="card-metric card-top-accent">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-                <div>
-                    <p class="text-muted small mb-1">PENDING LOAN REPAYMENTS</p>
-                    <h2 class="fw-bold mb-0">{{ pending_loans_count }}</h2>
-                </div>
-                <div class="icon-box bg-light text-warning">
-                    <i class="fas fa-money-check-alt"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 5. Today's STK Summary -->
-    <div class="col-xl-3 col-lg-4 col-md-6">
-        <div class="card-metric card-top-accent">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-                <div>
-                    <p class="text-muted small mb-1">TODAY'S STK SUMMARY</p>
-                    <div class="d-flex gap-3 mt-2">
-                        <div>
-                            <p class="mb-0 small text-muted">Success</p>
-                            <h5 class="fw-bold text-success mb-0">{{ stk_success }}</h5>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="fw-bold text-dark mb-0">Overview</h5>
+    
+    {% if active_chama %}
+    <div class="dropdown">
+        <button class="btn btn-download dropdown-toggle px-3 py-2 rounded-pill shadow-sm d-flex align-items-center" type="button" id="reportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-download me-2 text-muted"></i> Download Report
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2 rounded-3" aria-labelledby="reportDropdown">
+            <li>
+                <a class="dropdown-item rounded-2 py-2 mb-1" href="{% url 'dashboard:full_report' active_chama.id %}">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-circle bg-primary-subtle text-primary mb-0 me-2" style="width: 32px; height: 32px; font-size: 0.9rem;">
+                            <i class="fas fa-database"></i>
                         </div>
                         <div>
-                            <p class="mb-0 small text-muted">Failed</p>
-                            <h5 class="fw-bold text-danger mb-0">{{ stk_failed }}</h5>
-                        </div>
-                        <div>
-                            <p class="mb-0 small text-muted">Pending</p>
-                            <h5 class="fw-bold text-warning mb-0">{{ stk_pending }}</h5>
+                            <span class="d-block fw-bold small">Full Data Export</span>
+                            <span class="text-muted d-block" style="font-size: 0.7rem;">Members, loans & history</span>
                         </div>
                     </div>
-                </div>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item rounded-2 py-2" href="{% url 'dashboard:financial_report' active_chama.id %}">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-circle bg-success-subtle text-success mb-0 me-2" style="width: 32px; height: 32px; font-size: 0.9rem;">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                        <div>
+                            <span class="d-block fw-bold small">Financial Report</span>
+                            <span class="text-muted d-block" style="font-size: 0.7rem;">Transactions only</span>
+                        </div>
+                    </div>
+                </a>
+            </li>
+        </ul>
+    </div>
+    {% endif %}
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-lg-6">
+        <div class="card-base d-flex align-items-center">
+            <div class="icon-circle bg-light text-primary mb-0 me-3">
+                <i class="fas fa-users"></i>
+            </div>
+            <div>
+                <p class="text-muted small mb-0 text-uppercase fw-bold">Total Members</p>
+                <h3 class="fw-bold mb-0">{{ total_members }}</h3>
             </div>
         </div>
     </div>
 
-    <!-- 6. Penalties Overview -->
-    <div class="col-xl-3 col-lg-4 col-md-6">
-        <div class="card-metric card-top-accent">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-                <div>
-                    <p class="text-muted small mb-1">PENALTIES OVERVIEW</p>
-                    <h2 class="fw-bold mb-0">Ksh {{ total_penalty_amount|floatformat:2 }}</h2>
-                    <p class="text-danger small mb-0">Unpaid: {{ unpaid_penalty_count }}</p>
-                </div>
-                <div class="icon-box bg-light text-danger">
-                    <i class="fas fa-exclamation-circle"></i>
-                </div>
+    <div class="col-md-6 col-lg-6">
+        <div class="card-base d-flex align-items-center">
+            <div class="icon-circle bg-light text-success mb-0 me-3">
+                <i class="fas fa-coins"></i>
             </div>
-        </div>
-    </div>
-
-    <!-- 7. Progress Toward Chama Target -->
-    <div class="col-xl-6 col-lg-8 col-md-12">
-        <div class="card-metric card-top-accent">
-            <div class="mb-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <p class="text-muted small mb-0">GOAL PROGRESS</p>
-                    <span class="badge bg-success">{{ progress_percent|floatformat:1 }}%</span>
-                </div>
-                <h4 class="fw-bold mb-1">Ksh {{ collected|floatformat:0 }} / Ksh {{ target|floatformat:0 }}</h4>
-                <div class="progress" style="height: 12px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress_percent }}%;" aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <p class="text-muted small mt-2 mb-0">Target: Ksh {{ target|floatformat:0 }}</p>
+            <div>
+                <p class="text-muted small mb-0 text-uppercase fw-bold">Total Contributions</p>
+                <h3 class="fw-bold mb-0">Ksh {{ total_contributions|intword|default:"0" }}</h3>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Charts and Activity Row -->
+<h6 class="text-muted fw-bold text-uppercase small mb-3 ls-1">Attention Needed</h6>
+<div class="row g-4 mb-4">
+    <div class="col-lg-4 col-md-6">
+        <div class="card-base card-attention border-orange">
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-orange fw-bold small"><i class="fas fa-exclamation-circle me-2"></i>PENDING DUES</span>
+            </div>
+            <h2 class="fw-bold mb-0">{{ pending_regular_count }}</h2>
+            <small class="text-muted">Expected: Ksh {{ pending_regular_amount|intcomma }}</small>
+        </div>
+    </div>
+
+    <div class="col-lg-4 col-md-6">
+        <div class="card-base card-attention border-purple">
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-purple fw-bold small"><i class="fas fa-hand-holding-usd me-2"></i>LOAN REQUESTS</span>
+            </div>
+            <h2 class="fw-bold mb-0">{{ pending_loans_count }}</h2>
+            <small class="text-muted">Requests awaiting approval</small>
+        </div>
+    </div>
+
+    <div class="col-lg-4 col-md-12">
+        <div class="card-base card-attention border-blue">
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-blue fw-bold small"><i class="fas fa-user-plus me-2"></i>JOIN REQUESTS</span>
+            </div>
+            <h2 class="fw-bold mb-0">{{ pending_join_count }}</h2>
+            <small class="text-muted">New members waiting</small>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-4 col-md-12">
+        <div class="card-base card-dark">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold mb-0">Today's STK</h6>
+                <i class="fas fa-mobile-alt text-white-muted"></i>
+            </div>
+            <div class="d-flex justify-content-between text-center mt-3">
+                <div>
+                    <h4 class="text-success fw-bold mb-0">{{ stk_success }}</h4>
+                    <small class="text-white-muted" style="font-size: 0.7rem;">Success</small>
+                </div>
+                <div>
+                    <h4 class="text-danger fw-bold mb-0">{{ stk_failed }}</h4>
+                    <small class="text-white-muted" style="font-size: 0.7rem;">Failed</small>
+                </div>
+                <div>
+                    <h4 class="text-warning fw-bold mb-0">{{ stk_pending }}</h4>
+                    <small class="text-white-muted" style="font-size: 0.7rem;">Pending</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4 col-md-6">
+        <div class="card-base card-pink d-flex flex-column justify-content-center">
+            <div class="d-flex align-items-center mb-3">
+                <div class="icon-circle icon-pink mb-0 me-3" style="width: 40px; height: 40px;">
+                    <i class="fas fa-gavel"></i>
+                </div>
+                <h6 class="fw-bold mb-0">Unpaid Penalties</h6>
+            </div>
+            <div>
+                <h3 class="fw-bold mb-0 text-danger">Ksh {{ unpaid_penalty_amount|intcomma }}</h3>
+                <small style="color: #9f1239;">{{ unpaid_penalty_count }} Members Owing</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4 col-md-6">
+        <div class="card-base card-green">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="fw-bold mb-0">Chama Goal</h6>
+                <span class="badge bg-white text-success">{{ progress_percent|floatformat:0 }}%</span>
+            </div>
+            <h4 class="fw-bold mb-2">Ksh {{ collected|intword }}</h4>
+            <small class="text-white-muted d-block mb-2">Target: Ksh {{ target|intword }}</small>
+            <div class="progress progress-dark-bg" style="height: 6px;">
+                <div class="progress-bar bg-white" role="progressbar" style="width: {{ progress_percent }}%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row g-4">
-    <!-- Contribution History Chart -->
     <div class="col-lg-8">
-        <div class="card-metric card-top-accent">
-            <h5 class="fw-bold mb-4">Contributions (Last 6 Months)</h5>
+        <div class="card-base">
+            <h6 class="fw-bold mb-4">Contribution History</h6>
             <div style="height: 300px; position: relative;">
                 <canvas id="contributionChart"></canvas>
             </div>
         </div>
     </div>
 
-    <!-- Recent Activity -->
     <div class="col-lg-4">
-        <div class="card-metric card-top-accent">
-            <h5 class="fw-bold mb-3">Recent Activity</h5>
+        <div class="card-base p-0 overflow-hidden">
+            <div class="p-3 border-bottom bg-light">
+                <h6 class="fw-bold mb-0">Recent Activity</h6>
+            </div>
             <div style="max-height: 300px; overflow-y: auto;">
                 {% if recent_activities %}
                     {% for activity in recent_activities %}
-                    <div class="activity-item">
-                        <div class="activity-icon {{ activity.color }}">
-                            <i class="fas {{ activity.icon }}"></i>
+                    <div class="p-3 border-bottom d-flex align-items-center">
+                        <div class="me-3">
+                            {% if activity.type == 'contribution' %}
+                                <div class="icon-circle mb-0 bg-success-subtle text-success" style="width: 35px; height: 35px; font-size: 0.9rem;"><i class="fas fa-coins"></i></div>
+                            {% elif activity.type == 'loan' %}
+                                <div class="icon-circle mb-0 bg-warning-subtle text-warning" style="width: 35px; height: 35px; font-size: 0.9rem;"><i class="fas fa-hand-holding-usd"></i></div>
+                            {% elif activity.type == 'penalty' %}
+                                <div class="icon-circle mb-0 bg-danger-subtle text-danger" style="width: 35px; height: 35px; font-size: 0.9rem;"><i class="fas fa-exclamation"></i></div>
+                            {% else %}
+                                <div class="icon-circle mb-0 bg-light text-dark" style="width: 35px; height: 35px; font-size: 0.9rem;"><i class="fas fa-info"></i></div>
+                            {% endif %}
                         </div>
-                        <div class="activity-content">
-                            <p class="activity-description mb-0">{{ activity.description }}</p>
-                            <small class="activity-time">{{ activity.timestamp|timesince }} ago</small>
+                        <div>
+                            <p class="mb-0 small fw-bold text-dark">{{ activity.description }}</p>
+                            <small class="text-muted" style="font-size: 0.75rem;">{{ activity.timestamp|timesince }} ago</small>
                         </div>
                     </div>
                     {% endfor %}
                 {% else %}
-                    <p class="text-center text-muted py-4">No recent activity.</p>
+                    <div class="p-4 text-center text-muted">No recent activity.</div>
                 {% endif %}
             </div>
         </div>
@@ -167,19 +207,35 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{{ contributions_history|json_script:"history-data" }}
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Contribution History Chart
     const ctx = document.getElementById('contributionChart');
+    
+    // Read data safely from the JSON script tag
+    const rawDataElement = document.getElementById('history-data');
+    let historyData = [];
+    
+    if (rawDataElement) {
+        try {
+            historyData = JSON.parse(rawDataElement.textContent);
+        } catch (e) {
+            console.error("Error parsing chart data:", e);
+        }
+    }
+
+    // Chart Logic
     if (ctx) {
-        const historyData = {{ contributions_history|safe }};
-        
         const labels = historyData.map(item => {
+            // Check if month string is valid, otherwise fallback
             const date = new Date(item.month);
-            return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            return isNaN(date.getTime()) ? item.month : date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
         });
         
-        const data = historyData.map(item => parseFloat(item.total) || 0);
+        const data = historyData.map(item => item.total);
         
         new Chart(ctx, {
             type: 'line',
@@ -188,26 +244,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     label: 'Contributions (Ksh)',
                     data: data,
-                    backgroundColor: 'rgba(34, 139, 34, 0.1)',
-                    borderColor: '#228b22',
+                    backgroundColor: 'rgba(6, 78, 59, 0.1)',
+                    borderColor: '#064e3b',
                     borderWidth: 2,
-                    tension: 0.3,
-                    fill: true
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#064e3b',
+                    pointRadius: 4
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
+                plugins: { legend: { display: false } },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        grid: { borderDash: [2, 4] }
+                        grid: { borderDash: [5, 5], color: '#f0f0f0' },
+                        ticks: { font: { size: 11 } }
                     },
                     x: {
-                        grid: { display: false }
+                        grid: { display: false },
+                        ticks: { font: { size: 11 } }
                     }
                 }
             }

@@ -1,12 +1,22 @@
 {% extends "registration/base.html" %}
 {% block content %}
 
+<!-- Messages -->
+{% if messages %}
+  <div id="message-container">
+    {% for message in messages %}
+      {% ifchanged message %}
+        <div class="alert alert-success">{{ message }}</div>
+      {% endifchanged %}
+    {% endfor %}
+  </div>
+{% endif %}
+
 <div class="login-container" id="login">
     <div class="top">
         <span>New to SmartChama?
             <a href="{% url 'signup' %}">Signup</a>
         </span>
-        
     </div>
 
     <form method="post" action="{% url 'login' %}">

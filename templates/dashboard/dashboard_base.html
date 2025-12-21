@@ -11,187 +11,215 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
-    <style>
-         /* Profile Image in Nav */
-        .nav-profile-img { width: 32px; height: 32px; object-fit: cover; border-radius: 50%; }
-        .nav-profile-placeholder { width: 32px; height: 32px; border-radius: 50%; background-color: #6c757d; color: white; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px; }
-    </style>
-    {% block extra_css %}{% endblock %}
 </head>
 <body>
 
 <div class="d-flex" id="wrapper">
 
-    <div id="sidebar-wrapper"> 
-        <div class="sidebar-heading fw-bold d-flex align-items-center">
-            <span class="text-orange me-2"><i class="fa-brands fa-scribd"></i></span> 
-            SmartChama
+    <div id="sidebar-wrapper">
+        
+        <div class="brand-section">
+            <div class="brand-icon"><i class="fa-solid fa-piggy-bank"></i></div>
+            <div class="brand-text">
+                <h4>SmartChama</h4>
+                <span>FINANCIAL GROWTH</span>
+            </div>
         </div>
 
-        <div class="p-3 border-bottom">
-            <div class="dropdown w-100">
-                <button class="btn btn-outline-primary w-100 dropdown-toggle" type="button" id="roleSwitchDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-exchange-alt me-2"></i> Switch Roles
-                </button>
-                <ul class="dropdown-menu w-100 shadow" aria-labelledby="roleSwitchDropdown">
-                    {% if chama_with_roles %}
-                        {% for membership in chama_with_roles %}
+        <div class="sidebar-profile-card">
+            <div class="profile-img-wrap">
+                {% if user.user_profile_picture %}
+                    <img src="{{ user.user_profile_picture.url }}" class="profile-avatar">
+                {% else %}
+                    <div class="nav-profile-placeholder profile-avatar">
+                        {{ user.user_first_name|slice:":1"|upper }}
+                    </div>
+                {% endif %}
+                <span class="status-indicator"></span>
+            </div>
+            <div class="profile-details">
+                <h6 class="text-truncate" style="max-width: 140px;">{{ user.user_first_name }} {{ user.user_last_name }}</h6>
+                <small class="text-truncate" style="max-width: 140px;">
+                    {{ active_role|title }} • {% if active_chama %}{{ active_chama.chama_name }}{% else %}No Chama{% endif %}
+                </small>
+            </div>
+        </div>
+
+        <div class="dropdown">
+            <button class="switch-role-btn dropdown-toggle" type="button" id="roleSwitchDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-id-card-alt me-2"></i> Switch Roles
+            </button>
+            <ul class="dropdown-menu shadow border-0" aria-labelledby="roleSwitchDropdown">
+                {% if chama_with_roles %}
+                    {% for membership in chama_with_roles %}
+                        {% with active_chama_id=request.session.active_chama_id active_role=request.session.active_role %}
                         <li>
-                            <a class="dropdown-item {% if membership.membership_chama.id == active_chama.id and membership.membership_role == active_role %}active{% endif %}" 
-                               href="{% url 'dashboard:switch_role' chama_id=membership.membership_chama.id role=membership.membership_role %}">
+                            <a class="dropdown-item small 
+                                {% if membership.membership_chama.id == active_chama_id and membership.membership_role|lower == active_role %}
+                                    active fw-bold text-primary
+                                {% endif %}"
+                                href="{% url 'dashboard:switch_role' chama_id=membership.membership_chama.id role=membership.membership_role %}">
                                 <strong>{{ membership.membership_chama.chama_name }}</strong> - {{ membership.membership_role|title }}
+                                {% if membership.membership_chama.id == active_chama_id and membership.membership_role|lower == active_role %}
+                                    <i class="fas fa-check ms-2"></i>
+                                {% endif %}
                             </a>
                         </li>
-                        {% endfor %}
-                    {% else %}
-                         <li><span class="dropdown-item text-muted">No roles found</span></li>
-                    {% endif %}
-                </ul>
-            </div>
+                        {% endwith %}
+                    {% endfor %}
+                {% else %}
+                    <li><span class="dropdown-item text-muted">No roles found</span></li>
+                {% endif %}
+            </ul>
         </div>
-        <div class="list-group list-group-flush mt-2" id="sidebarAccordion">
+
+        <div class="mt-2">
             
-            <a href="{% url 'dashboard:dashboard' %}" class="list-group-item list-group-item-action">
-               <i class="fas fa-th-large me-3"></i>Dashboard
+            <a href="{% url 'dashboard:dashboard' %}" class="nav-header">
+                <span><i class="fas fa-th-large icon-left"></i>Dashboard</span>
             </a>
 
-            <a href="#financeSubmenu" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
-               data-bs-toggle="collapse" aria-expanded="false">
-               <span><i class="fas fa-wallet me-3"></i>Finance</span>
-               <i class="fas fa-chevron-down small text-muted"></i>
+            <a href="#ManageSubmenu" class="nav-header mt-2" data-bs-toggle="collapse" aria-expanded="true">
+               <span><i class="fas fa-briefcase icon-left"></i>Manage Chama</span>
+               <i class="fas fa-chevron-up"></i>
             </a>
-            <div class="collapse sidebar-submenu" id="financeSubmenu" data-bs-parent="#sidebarAccordion">
+            
+            <div class="collapse show submenu-container" id="ManageSubmenu">
+                
+                {% if active_chama and active_role in 'admin, treasurer, secretary' %}
+                <a href="{% url 'notification:create_meeting' %}" class="btn-action-primary">
+                    <i class="fas fa-plus-circle me-2"></i> Create Meeting
+                </a>
+                {% endif %}
+
+                {% if active_chama and active_role in 'admin, treasurer, secretary' %}
+                     <a href="{% url 'finance:chama_all_contributions' chama_id=active_chama.id %}" class="nav-item-link">Chama Transactions</a>
+                     <a href="{% url 'notification:admin_meeting_list' %}" class="nav-item-link">Manage Meetings</a>
+                     <a href="{% url 'finance:chama_outstanding_dues' active_chama.id %}" class="nav-item-link">Manage Dues</a>
+                {% endif %}
+
+                {% if active_chama and active_role in 'admin, secretary' %}
+                    <a href="{% url 'chama:manage_members' pk=active_chama.id %}" class="nav-item-link">Manage members</a>
+                    <a href="{% url 'chama:join_requests' active_chama.id %}" class="nav-item-link">
+                        Join Requests <span class="menu-badge ms-auto">3</span>
+                    </a>
+                    <a href="{% url 'notification:create_meeting' %}" class="nav-item-link">
+                    Create Meeting
+                </a>
+                     <a href="{% url 'notification:create_notification' chama_id=active_chama.id %}" class="nav-item-link">Create Notification</a>
+                {% endif %}
+            </div>
+
+            <a href="#financeSubmenu" class="nav-header" data-bs-toggle="collapse" aria-expanded="false">
+               <span><i class="fas fa-wallet icon-left"></i>Finance</span>
+               <i class="fas fa-chevron-down"></i>
+            </a>
+            <div class="collapse submenu-container" id="financeSubmenu">
                 {% if active_chama %}
-                    <a href="{% url 'finance:list_contributions' active_chama.id %}" class="list-group-item list-group-item-action ps-5">My Transactions</a>
-                    <a href="{% url 'finance:list_cycles' active_chama.id %}" class="list-group-item list-group-item-action ps-5">Cycles</a>
-                    <a href="{% url 'finance:list_loans' active_chama.id %}" class="list-group-item list-group-item-action ps-5">Loans</a>
-                    <a href="{% url 'finance:list_penalties' active_chama.id %}" class="list-group-item list-group-item-action ps-5">Penalties</a>
-                    <a href="{% url 'finance:member_dues' user.id %}" class="list-group-item list-group-item-action ps-5">My Dues</a>
-                    <a href="{% url 'finance:query_transaction_page' %}" class="list-group-item list-group-item-action ps-5">Query Status</a>
-                {% endif %}
-                {% if active_chama and active_role in 'admin,secretary' %}
-                     <a href="{% url 'finance:chama_all_contributions' chama_id=active_chama.id %}" class="list-group-item list-group-item-action ps-5">Chama Transactions</a>
-                     <a href="{% url 'finance:chama_outstanding_dues' active_chama.id %}" class="list-group-item list-group-item-action ps-5">Manage Dues</a>
+                    <a href="{% url 'finance:list_contributions' active_chama.id %}" class="nav-item-link">My Transactions</a>
+                    <a href="{% url 'finance:list_cycles' active_chama.id %}" class="nav-item-link">Cycles</a>
+                    <a href="{% url 'finance:list_loans' active_chama.id %}" class="nav-item-link">Loans</a>
+                    <a href="{% url 'finance:list_penalties' active_chama.id %}" class="nav-item-link">Penalties</a>
+                    <a href="{% url 'finance:member_dues' user.id %}" class="nav-item-link">My Dues</a>
+                    <a href="{% url 'finance:query_transaction_page' %}" class="nav-item-link">Query Status</a>
                 {% endif %}
             </div>
 
-            <a href="#chamaSubmenu" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
-               data-bs-toggle="collapse" aria-expanded="false">
-               <span><i class="fas fa-users me-3"></i>Chama</span>
-               <i class="fas fa-chevron-down small text-muted"></i>
+            <a href="#chamaSubmenu" class="nav-header" data-bs-toggle="collapse" aria-expanded="false">
+               <span><i class="fas fa-users icon-left"></i>Chama</span>
+               <i class="fas fa-chevron-down"></i>
             </a>
-            <div class="collapse sidebar-submenu" id="chamaSubmenu" data-bs-parent="#sidebarAccordion">
-                <a href="{% url 'chama:my_chamas' %}" class="list-group-item list-group-item-action ps-5">My Chamas</a>
-                <a href="{% url 'chama:create_chama' %}" class="list-group-item list-group-item-action ps-5">Join / Create</a>
-                {% if active_chama and active_role in 'admin,secretary' %}
-                    <a href="{% url 'chama:manage_members' pk=active_chama.id %}" class="list-group-item list-group-item-action ps-5">Manage members</a>
-                    <a href="{% url 'chama:join_requests' active_chama.id %}" class="list-group-item list-group-item-action ps-5">Join Requests</a>
-                {% endif %}
+            <div class="collapse submenu-container" id="chamaSubmenu">
+                <a href="{% url 'chama:my_chamas' %}" class="nav-item-link">My Chamas</a>
+                <a href="{% url 'chama:create_chama' %}" class="nav-item-link">Join / Create</a>
             </div>
 
-            <a href="#NotifySubmenu" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
-               data-bs-toggle="collapse" aria-expanded="false">
-               <span><i class="fas fa-bell me-3"></i>Notification</span>
-               <i class="fas fa-chevron-down small text-muted"></i>
+            <a href="#meetingSubmenu" class="nav-header mt-2" data-bs-toggle="collapse" aria-expanded="false">
+               <span><i class="fas fa-calendar-alt icon-left"></i>Meetings</span>
+               <i class="fas fa-chevron-down"></i>
             </a>
-            <div class="collapse sidebar-submenu" id="NotifySubmenu" data-bs-parent="#sidebarAccordion">
-                <a href="{% url 'notification:notification_list' %}" class="list-group-item list-group-item-action ps-5">My Notifications</a>
-                <a href="{% url 'notification:notification_logs' %}" class="list-group-item list-group-item-action ps-5">Notification Logs</a>
-                {% if active_chama and active_role in 'admin,secretary' %}
-                    <a href="{% url 'notification:create_notification' chama_id=active_chama.id %}" class="list-group-item list-group-item-action ps-5">Create Notification</a>
-                {% endif %}
+            
+            <div class="collapse submenu-container" id="meetingSubmenu">
+                <a href="{% url 'notification:meeting_list' %}" class="nav-item-link">
+                    All Meetings
+                </a>
+
+                <a href="{% url 'notification:my_attendance' %}" class="nav-item-link">
+                    My Attendance
+                </a>
             </div>
 
-            <a href="#meetingSubmenu" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
-               data-bs-toggle="collapse" aria-expanded="false">
-               <span><i class="fas fa-calendar-check me-3"></i>Meetings</span>
-               <i class="fas fa-chevron-down small text-muted"></i>
+            <a href="#NotifySubmenu" class="nav-header" data-bs-toggle="collapse" aria-expanded="false">
+               <span><i class="fas fa-bell icon-left"></i>Notification</span>
+               <i class="fas fa-chevron-down"></i>
             </a>
-            <div class="collapse sidebar-submenu" id="meetingSubmenu" data-bs-parent="#sidebarAccordion">
-                <a href="{% url 'notification:meeting_list' %}" class="list-group-item list-group-item-action ps-5"> My Meetings</a>
-                <a href="{% url 'notification:my_attendance' %}" class="list-group-item list-group-item-action ps-5">My Attendance</a>
-                {% if active_chama and active_role in 'admin,secretary' %}
-                    <a href="{% url 'notification:admin_meeting_list' %}" class="list-group-item list-group-item-action ps-5">Manage Meetings</a>
-                    <a href="{% url 'notification:create_meeting' %}" class="list-group-item list-group-item-action ps-5">Create Meeting</a>
-                {% endif %}
+            <div class="collapse submenu-container" id="NotifySubmenu">
+                <a href="{% url 'notification:notification_list' %}" class="nav-item-link">My Notifications</a>
+                <a href="{% url 'notification:notification_logs' %}" class="nav-item-link">Notification Logs</a>
             </div>
 
-            <a href="#settingsSubmenu" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
-               data-bs-toggle="collapse" aria-expanded="false">
-               <span><i class="fas fa-cog me-3"></i>Settings</span>
-               <i class="fas fa-chevron-down small text-muted"></i>
+            <a href="#settingsSubmenu" class="nav-header" data-bs-toggle="collapse" aria-expanded="false">
+               <span><i class="fas fa-cog icon-left"></i>Settings</span>
+               <i class="fas fa-chevron-down"></i>
             </a>
-            <div class="collapse sidebar-submenu" id="settingsSubmenu" data-bs-parent="#sidebarAccordion">
-                <a href="{% url 'profile' %}" class="list-group-item list-group-item-action ps-5">Edit Profile</a>
-                <a href="{% url 'notification:notification_settings' %}" class="list-group-item list-group-item-action ps-5">Notification Settings</a>
+            <div class="collapse submenu-container" id="settingsSubmenu">
+                <a href="{% url 'profile' %}" class="nav-item-link">Edit Profile</a>
+                <a href="{% url 'notification:notification_settings' %}" class="nav-item-link">Notification Settings</a>
             </div>
             
+            <a href="#" class="nav-header">
+                <span><i class="fas fa-question-circle icon-left"></i>Help & Support</span>
+            </a>
+
         </div>
+
+        <div class="sidebar-footer">
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="logout-card-btn">
+                    <span><i class="fas fa-sign-out-alt me-2"></i> Logout</span>
+                    <i class="fas fa-chevron-right text-muted small"></i>
+                </button>
+            </form>
+        </div>
+
     </div>
 
     <div id="page-content-wrapper">
         
-        <nav class="navbar navbar-expand-lg navbar-light bg-transparent py-3 px-4 fixed-top-spacer">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-bars fs-5 me-3 text-dark pointer" id="menu-toggle" style="cursor: pointer;"></i>
+        <nav class="navbar navbar-expand-lg navbar-light bg-transparent py-3 px-4">
+            <div class="d-flex align-items-center w-100">
+                <i class="fas fa-bars fs-5 me-3 text-dark pointer d-md-none" id="menu-toggle"></i>
                 
-                {% if active_chama %}
-                    {% if active_role == 'admin' %}
-                        <a href="{% url 'dashboard:full_report' chama_id=active_chama.id %}" class="download-report-btn me-3">
-                            <i class="fas fa-file-csv"></i>
-                            <span>Download Full Report</span>
-                        </a>
-                    {% elif active_role == 'treasurer' %}
-                        <a href="{% url 'dashboard:financial_report' chama_id=active_chama.id %}" class="download-report-btn me-3">
-                            <i class="fas fa-file-csv"></i>
-                            <span>Download Finance Report</span>
-                        </a>
-                    {% endif %}
-                {% endif %}
-                
-                <div>
-                    <h4 class="m-0 fw-bold">{% block header %}Dashboard{% endblock %}</h4>
-                </div>
-            </div>
+                <h4 class="m-0 fw-bold">{% block header %}Dashboard{% endblock %}</h4>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
-
+                <div class="ms-auto d-flex align-items-center">
+                    
                     {% if active_chama %}
-                    <li class="nav-item d-none d-md-block me-3">
-                        <form method="get" action="{% url 'dashboard:dashboard_search' active_chama.id %}">
-                            <div class="input-group search-bar bg-white rounded-pill px-3 py-1 shadow-sm">
-                                <span class="input-group-text border-0 bg-transparent p-0">
-                                    <i class="fas fa-search text-muted small"></i>
-                                </span>
-                                <input type="text" name="q" class="form-control border-0 bg-transparent shadow-none small" placeholder="Search members...">
-                            </div>
-                        </form>
-                    </li>
+                    <form method="get" action="{% url 'dashboard:dashboard_search' active_chama.id %}" class="d-none d-md-block me-3">
+                        <div class="input-group search-bar bg-white rounded-pill px-3 py-1 shadow-sm">
+                            <span class="input-group-text border-0 bg-transparent p-0"><i class="fas fa-search text-muted small"></i></span>
+                            <input type="text" name="q" class="form-control border-0 bg-transparent shadow-none small" placeholder="Search members...">
+                        </div>
+                    </form>
                     {% endif %}
 
-                    <li class="nav-item dropdown me-3">
+                    <div class="dropdown me-3">
                         <a class="nav-link position-relative icon-circle bg-white shadow-sm" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="far fa-bell text-dark"></i>
                             {% if unread_count > 0 %}
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-circle bg-danger p-1">
-                                {{ unread_count }}
-                            </span>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-circle bg-danger p-1">{{ unread_count }}</span>
                             {% endif %}
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 notification-dropdown" aria-labelledby="notificationDropdown">
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 notification-dropdown" aria-labelledby="notificationDropdown" style="width: 300px; max-height: 400px; overflow-y: auto;">
                             <li><h6 class="dropdown-header">Unread Notifications</h6></li>
                             <div class="notification-list-scroll">
                                 {% for n in latest_notifications|slice:":5" %} 
                                 <li>
                                     <a class="dropdown-item d-flex align-items-start py-2" href="{% url 'notification:notification_detail' n.id %}">
                                         <div class="icon-circle-sm bg-light-orange me-2"><i class="fas fa-info"></i></div>
-                                        <div>
-                                            <small class="fw-bold d-block text-truncate" style="max-width: 180px;">{{ n.notification_title }}</small>
+                                        <div style="white-space: normal;">
+                                            <small class="fw-bold d-block">{{ n.notification_title }}</small>
                                             <small class="text-muted" style="font-size:0.7rem;">{{ n.notification_created_at|timesince }} ago</small>
                                         </div>
                                     </a>
@@ -203,34 +231,25 @@
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-center small text-orange" href="{% url 'notification:notification_list' %}">View All</a></li>
                         </ul>
-                    </li>
+                    </div>
 
-                    <li class="nav-item me-3 d-none d-sm-block">
-                         <div class="icon-circle bg-white shadow-sm">
-                            <i class="far fa-envelope text-dark"></i>
-                            </div>
-                    </li>
-
-                    <li class="nav-item dropdown ms-2">
-                        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="dropdown">
+                        <a href="#" class="d-flex align-items-center text-decoration-none" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
                             {% if user.user_profile_picture %}
-                                <img src="{{ user.user_profile_picture.url }}" alt="Profile" class="nav-profile-img me-2">
+                                <img src="{{ user.user_profile_picture.url }}" alt="Profile" class="nav-profile-img-sm" style="width: 32px; height: 32px; object-fit: cover; border-radius: 50%;">
                             {% else %}
-                                <div class="nav-profile-placeholder me-2">
+                                <div class="nav-profile-placeholder-sm" style="width: 32px; height: 32px; border-radius: 50%; background-color: #6c757d; color: white; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px;">
                                     {{ user.user_first_name|slice:":1"|upper }}
                                 </div>
                             {% endif %}
-                            <span class="d-none d-sm-inline fw-medium text-dark">
-                                {{ user.user_first_name }}
-                            </span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="dropdownUser1">
+                            <li><h6 class="dropdown-header">Hello, {{ user.user_first_name }}</h6></li>
                             <li>
                                 <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileUploadModal">
-                                    <i class="fas fa-camera me-2 text-muted"></i> My Profile (Upload)
+                                    <i class="fas fa-camera me-2 text-muted"></i> Update Photo
                                 </a>
                             </li>
-                            <li><a class="dropdown-item" href="{% url 'notification:notification_settings' %}"><i class="fas fa-cog me-2 text-muted"></i> Settings</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form action="{% url 'logout' %}" method="post" class="d-inline">
@@ -239,54 +258,60 @@
                                 </form>
                             </li>
                         </ul>
-                    </li>
-                </ul>
+                    </div>
+                </div>
             </div>
         </nav>
 
-        <div class="container-fluid px-4 pb-5 content-spacer">
+        <div class="container-fluid px-4 pb-5">
             {% block content %}
             {% endblock %}
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="profileUploadModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="profileUploadModal" tabindex="-1" aria-labelledby="profileUploadModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="post" enctype="multipart/form-data" action="{% url 'upload_profile_picture' %}">
-            {% csrf_token %}
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Update Profile Picture</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="profileUploadModalLabel">Update Profile Photo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
                 <div class="modal-body text-center">
                     <div class="mb-4">
                         {% if user.user_profile_picture %}
                             <img src="{{ user.user_profile_picture.url }}" class="rounded-circle shadow-sm" style="width: 100px; height: 100px; object-fit: cover;">
                         {% else %}
-                            <div class="rounded-circle bg-secondary text-white d-flex justify-content-center align-items-center mx-auto shadow-sm" style="width: 100px; height: 100px; font-size: 2.5rem;">
+                            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center mx-auto" style="width: 100px; height: 100px; font-size: 2rem;">
                                 {{ user.user_first_name|slice:":1"|upper }}
                             </div>
                         {% endif %}
                     </div>
+                    
                     <div class="mb-3">
-                        <label for="user_profile_picture" class="form-label fw-bold">Select New Image</label>
-                        <input class="form-control" type="file" id="user_profile_picture" name="user_profile_picture" accept="image/*" required>
+                        <label for="profile_image" class="form-label text-muted small">Choose a new image</label>
+                        <input type="file" class="form-control" id="profile_image" name="profile_image" accept="image/*" required>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Upload</button>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Upload Photo</button>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{% static 'js/dashboard.js' %}"></script>
+<script>
+    document.getElementById("menu-toggle").addEventListener("click", function() {
+        document.getElementById("sidebar-wrapper").classList.toggle("active");
+    });
+</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

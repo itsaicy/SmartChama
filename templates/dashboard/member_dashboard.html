@@ -1,145 +1,263 @@
-{% extends "dashboard/dashboard_base.html" %}
-{% load static humanize %}
+{% extends 'dashboard/dashboard_base.html' %}
+{% load static %}
+{% load humanize %}
 
 {% block title %}Member Dashboard - {{ active_chama.chama_name }}{% endblock %}
-{% block header %}Dashboard{% endblock %}
+{% block header %}Member Dashboard{% endblock %}
 
 {% block content %}
-<div class="row pt-5 mt-4">
+
+<div class="row mb-4">
     <div class="col-12">
-        <h2 class="fw-bold text-dark">👋 Welcome, Member!</h2>
-        {% if active_chama %}
-            <p class="text-muted">Overview for **{{ active_chama.chama_name }}**</p>
-        {% else %}
-             <p class="text-danger">Please select an active Chama from the sidebar to view your dashboard.</p>
-        {% endif %}
+        <div class="d-flex gap-3 overflow-auto py-2">
+            <a href="{% url 'finance:create_contribution' active_chama.id %}" class="btn bg-white shadow-sm action-pill d-flex align-items-center rounded-pill px-4 py-2 text-decoration-none">
+                <div class="icon-circle bg-success-subtle text-success me-2 mb-0" style="width: 32px; height: 32px; font-size: 0.9rem;"><i class="fas fa-plus"></i></div>
+                <span class="fw-bold text-dark small">Pay Contribution</span>
+            </a>
+            
+            <a href="{% url 'finance:request_loan' active_chama.id %}" class="btn bg-white shadow-sm action-pill d-flex align-items-center rounded-pill px-4 py-2 text-decoration-none">
+                <div class="icon-circle bg-warning-subtle text-warning me-2 mb-0" style="width: 32px; height: 32px; font-size: 0.9rem;"><i class="fas fa-hand-holding-usd"></i></div>
+                <span class="fw-bold text-dark small">Apply for Loan</span>
+            </a>
+
+            <a href="#" class="btn bg-white shadow-sm action-pill d-flex align-items-center rounded-pill px-4 py-2 text-decoration-none">
+                <div class="icon-circle bg-primary-subtle text-primary me-2 mb-0" style="width: 32px; height: 32px; font-size: 0.9rem;"><i class="fas fa-file-alt"></i></div>
+                <span class="fw-bold text-dark small">Meeting Minutes</span>
+            </a>
+        </div>
     </div>
 </div>
 
-{% if active_chama %}
-    <div class="row g-4 mt-3">
-        
-        <div class="col-xl-3 col-md-6">
-            <div class="card-metric card-top-accent h-100">
-                <div class="d-flex align-items-center mb-2">
-                    <div class="icon-box bg-light-orange me-3">
-                        <i class="fas fa-hand-holding-usd text-orange"></i>
-                    </div>
-                    <div class="text-uppercase text-muted fw-bold small">My Contribution Status</div>
-                </div>
-                <h3 class="mb-0 fw-bold text-{{ contrib_color }}">
-                    {{ contrib_status|default:"N/A" }}
-                </h3>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card-metric card-top-accent h-100">
-                <div class="d-flex align-items-center mb-2">
-                    <div class="icon-box bg-light-blue me-3">
-                        <i class="fas fa-piggy-bank text-info"></i>
-                    </div>
-                    <div class="text-uppercase text-muted fw-bold small">My Loans (Outstanding)</div>
-                </div>
-                <h3 class="mb-0 fw-bold text-dark">
-                    {% if active_loan %}
-                        Ksh. {{ active_loan.loan_outstanding_balance|floatformat:0|intcomma }}
-                    {% else %}
-                        None Active
-                    {% endif %}
-                </h3>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card-metric card-top-accent h-100">
-                <div class="d-flex align-items-center mb-2">
-                    <div class="icon-box bg-light-danger me-3">
-                        <i class="fas fa-exclamation-triangle text-danger"></i>
-                    </div>
-                    <div class="text-uppercase text-muted fw-bold small">Unpaid Penalties</div>
-                </div>
-                <h3 class="mb-0 fw-bold text-dark">
-                    Ksh. {{ total_penalty_amount|floatformat:0|intcomma }}
-                </h3>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card-metric card-top-accent h-100">
-                <div class="d-flex align-items-center mb-2">
-                    <div class="icon-box bg-light-purple me-3">
-                        <i class="fas fa-calendar-alt text-purple"></i>
-                    </div>
-                    <div class="text-uppercase text-muted fw-bold small">Next Meeting</div>
-                </div>
-                <h5 class="mb-1 fw-bold text-dark">
-                    {% if next_meeting %}
-                        {{ next_meeting.meeting_date|date:"M d, H:i" }}
-                    {% else %}
-                        Not Scheduled
-                    {% endif %}
-                </h5>
-                <small class="text-{{ attendance_status|lower|yesno:'success,warning,danger' }} fw-bold">
-                    My Status: {{ attendance_status }}
-                </small>
-            </div>
-        </div>
-    </div>
+<div class="row g-4 mb-4">
     
-    <div class="row g-4 mt-4">
-        <div class="col-xl-8">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white fw-bold text-dark border-0">
-                    <i class="fas fa-chart-line me-2"></i> My Contribution History (Last 6 Months)
-                </div>
-                <div class="card-body">
-                    <div class="chart-area" style="height: 300px;">
-                        <canvas id="myContributionChart" class="chart-canvas"
-                                data-type="line"
-                                data-label="Amount Contributed (Ksh)"
-                                data-labels="{{ chart_labels }}"
-                                data-data="{{ chart_data }}"
-                                ></canvas>
-                    </div>
-                </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card-base card-attention border-{{ contrib_color }}">
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-{{ contrib_color }} fw-bold small text-uppercase"><i class="fas fa-check-circle me-2"></i>Status</span>
             </div>
+            <h3 class="fw-bold mb-0 text-dark">{{ contrib_status }}</h3>
+            <small class="text-muted">Current Cycle</small>
         </div>
+    </div>
 
-        <div class="col-xl-4">
-            <div class="row g-4">
-                <div class="col-12">
-                    <div class="card-metric card-top-accent">
-                        <div class="d-flex align-items-center mb-2">
-                            <div class="icon-box bg-light-green me-3">
-                                <i class="far fa-bell text-success"></i>
-                            </div>
-                            <div class="text-uppercase text-muted fw-bold small">Unread Notifications</div>
-                        </div>
-                        <h3 class="mb-2 fw-bold text-dark">{{ unread_count }}</h3>
-                        <a href="{% url 'notification:notification_list' %}" class="small d-block text-primary">
-                            View All Notifications <i class="fas fa-arrow-right small"></i>
-                        </a>
-                    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card-base card-attention border-purple">
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-purple fw-bold small text-uppercase"><i class="fas fa-hand-holding-usd me-2"></i>Active Loan</span>
+            </div>
+            {% if active_loan %}
+                <h3 class="fw-bold mb-0">Ksh {{ active_loan.loan_outstanding_balance|intcomma }}</h3>
+                <div class="progress mt-2" style="height: 4px;">
+                    <div class="progress-bar bg-purple" role="progressbar" style="width: {{ loan_progress }}%; background-color: #8b5cf6;"></div>
                 </div>
+                <small class="text-muted">{{ loan_progress|floatformat:0 }}% Repaid</small>
+            {% else %}
+                <h3 class="fw-bold mb-0 text-muted">No Loan</h3>
+                <small class="text-muted">You are debt free</small>
+            {% endif %}
+        </div>
+    </div>
 
-                <div class="col-12">
-                    <div class="card-metric card-top-accent">
-                        <div class="text-uppercase text-muted fw-bold small mb-2">Chama Target Progress (Ksh. {{ chama_target|floatformat:0|intcomma }})</div>
-                        <h3 class="fw-bold text-orange mb-3">{{ chama_progress|floatformat:1 }}%</h3>
-                        <div class="progress" style="height: 10px;">
-                            <div class="progress-bar bg-orange" role="progressbar" style="width: {{ chama_progress|floatformat:0 }}%" aria-valuenow="{{ chama_progress|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                        <small class="text-muted mt-2 d-block">
-                            Total collected: Ksh. {{ total_collected|floatformat:0|intcomma }}
-                        </small>
-                    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card-base card-pink d-flex flex-column justify-content-center">
+            <div class="d-flex align-items-center mb-3">
+                <div class="icon-circle icon-pink mb-0 me-3" style="width: 40px; height: 40px;">
+                    <i class="fas fa-gavel"></i>
                 </div>
+                <h6 class="fw-bold mb-0">My Penalties</h6>
+            </div>
+            <div>
+                <h3 class="fw-bold mb-0 text-danger">Ksh {{ total_penalty_amount|intcomma }}</h3>
+                <small style="color: #9f1239;">{{ total_penalty_count }} Record(s)</small>
             </div>
         </div>
     </div>
-{% endif %}
-{% endblock content %}
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card-base card-green">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="fw-bold mb-0">Chama Goal</h6>
+                <span class="badge bg-white text-success">{{ chama_progress|floatformat:0 }}%</span>
+            </div>
+            <h4 class="fw-bold mb-2">Target: {{ chama_target|intword }}</h4>
+            <div class="progress progress-dark-bg" style="height: 6px;">
+                <div class="progress-bar bg-white" role="progressbar" style="width: {{ chama_progress }}%;"></div>
+            </div>
+            <small class="text-white-muted mt-2 d-block">Collective Progress</small>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card-base mb-4">
+            <h6 class="fw-bold mb-4">My Contribution History</h6>
+            <div style="height: 300px; position: relative;">
+                <canvas id="myContributionChart"></canvas>
+            </div>
+        </div>
+
+        {% if next_meeting %}
+        <div class="card-base card-dark position-relative overflow-hidden">
+            <div class="position-absolute top-0 end-0 bg-white opacity-10 rounded-circle" style="width: 150px; height: 150px; margin-top: -50px; margin-right: -50px; opacity: 0.1;"></div>
+            
+            <div class="d-flex flex-wrap align-items-center justify-content-between position-relative z-1">
+                <div>
+                    <span class="badge bg-primary mb-2">Next Meeting</span>
+                    <h4 class="fw-bold mb-1">{{ next_meeting.meeting_title }}</h4>
+                    <p class="text-white-muted mb-0"><i class="far fa-calendar me-2"></i>{{ next_meeting.meeting_date|date:"l, F jS, Y @ H:i" }}</p>
+                    <p class="text-white-muted mb-0"><i class="fas fa-map-marker-alt me-2"></i>{{ next_meeting.meeting_location }}</p>
+                </div>
+                
+                <div class="text-end mt-3 mt-md-0">
+                    <div id="countdown" class="d-flex gap-3 text-center" data-date="{{ next_meeting.meeting_date|date:'Y-m-d H:i:s' }}">
+                        <div>
+                            <h3 class="fw-bold mb-0 text-white" id="days">00</h3>
+                            <small class="text-white-muted small text-uppercase">Days</small>
+                        </div>
+                        <div class="h3 fw-bold">:</div>
+                        <div>
+                            <h3 class="fw-bold mb-0 text-white" id="hours">00</h3>
+                            <small class="text-white-muted small text-uppercase">Hrs</small>
+                        </div>
+                        <div class="h3 fw-bold">:</div>
+                        <div>
+                            <h3 class="fw-bold mb-0 text-white" id="minutes">00</h3>
+                            <small class="text-white-muted small text-uppercase">Mins</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <span class="badge bg-{% if attendance_status == 'present' %}success{% elif attendance_status == 'absent' %}danger{% else %}secondary{% endif %}">
+                            Attendance: {{ attendance_status|title }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card-base text-center py-5">
+            <div class="text-muted">
+                <i class="far fa-calendar-times fa-3x mb-3 text-secondary opacity-50"></i>
+                <h5>No Upcoming Meetings</h5>
+                <p class="mb-0">Relax! There are no meetings scheduled at the moment.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card-base p-0 overflow-hidden h-100">
+            <div class="p-3 border-bottom bg-light d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0">Unread Notifications</h6>
+                {% if unread_count > 0 %}
+                    <span class="badge bg-danger rounded-pill">{{ unread_count }}</span>
+                {% endif %}
+            </div>
+            <div class="list-group list-group-flush" style="max-height: 500px; overflow-y: auto;">
+                {% for note in latest_notifications %}
+                <a href="#" class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-start">
+                    <div class="icon-circle mb-0 bg-primary-subtle text-primary me-3" style="width: 40px; height: 40px; font-size: 1rem;">
+                        <i class="far fa-envelope"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1 text-dark small fw-bold">{{ note.notification_title }}</h6>
+                        <p class="text-muted small mb-1 lh-sm">{{ note.notification_message|truncatewords:8 }}</p>
+                        <small class="text-muted" style="font-size: 0.7rem;">{{ note.notification_created_at|timesince }} ago</small>
+                    </div>
+                </a>
+                {% empty %}
+                <div class="text-center py-5">
+                    <i class="far fa-bell-slash text-muted mb-2 opacity-50" style="font-size: 2rem;"></i>
+                    <p class="text-muted small">No new notifications</p>
+                </div>
+                {% endfor %}
+            </div>
+            {% if latest_notifications %}
+            <div class="p-2 text-center bg-light border-top">
+                <a href="#" class="small text-decoration-none fw-bold text-primary">View All Notifications</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Chart.js Implementation
+        const ctx = document.getElementById('myContributionChart');
+        if (ctx) {
+            // Safe JSON parsing from Django context
+            const labels = JSON.parse('{{ chart_labels|safe }}');
+            const data = JSON.parse('{{ chart_data|safe }}');
+    
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'My Contributions (Ksh)',
+                        data: data,
+                        borderColor: '#064e3b', // Matching Green Theme
+                        backgroundColor: 'rgba(6, 78, 59, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#064e3b',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { borderDash: [5, 5], color: '#f0f0f0' },
+                            ticks: { font: { size: 11 } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+    
+        // 2. Countdown Timer
+        const countdownEl = document.getElementById('countdown');
+        if (countdownEl) {
+            const dateStr = countdownEl.dataset.date;
+            // Ensure date string is compatible across browsers (replace space with T for ISO format if needed)
+            const targetDate = new Date(dateStr).getTime();
+    
+            const timer = setInterval(function() {
+                const now = new Date().getTime();
+                const distance = targetDate - now;
+    
+                if (distance < 0) {
+                    clearInterval(timer);
+                    countdownEl.innerHTML = "<h5 class='text-white mb-0'>Meeting Started!</h5>";
+                    return;
+                }
+    
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    
+                document.getElementById('days').innerText = days < 10 ? '0' + days : days;
+                document.getElementById('hours').innerText = hours < 10 ? '0' + hours : hours;
+                document.getElementById('minutes').innerText = minutes < 10 ? '0' + minutes : minutes;
+            }, 1000);
+        }
+    });
+</script>
 {% endblock %}

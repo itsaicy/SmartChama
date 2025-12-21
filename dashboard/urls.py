@@ -31,5 +31,6 @@ urlpatterns = [
     path('admin/<int:chama_id>/edit/', edit_member, name='edit_member'),
     path('admin/<int:chama_id>/delete/<int:user_id>/', delete_member, name='delete_member'),
     
+    
 
 ]

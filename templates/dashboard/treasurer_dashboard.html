@@ -1,184 +1,248 @@
-{% extends "base.html" %}
-{% load static humanize %}
+{% extends 'dashboard/dashboard_base.html' %}
+{% load humanize %}
 
 {% block title %}Treasurer Dashboard - {{ chama.chama_name }}{% endblock %}
+{% block header %}Treasurer Dashboard{% endblock %}
+
+{# --- Search bar goes in the topbar block, not inside content --- #}
+{% block topbar %}
+    {% if active_chama %}
+    <form method="get" action="{% url 'dashboard:dashboard_search' active_chama.id %}" class="d-none d-md-block me-3">
+        <div class="input-group search-bar bg-white rounded-pill px-3 py-1 shadow-sm">
+            <span class="input-group-text border-0 bg-transparent p-0">
+                <i class="fas fa-search text-muted small"></i>
+            </span>
+            <input type="text" name="q" class="form-control border-0 bg-transparent shadow-none small" placeholder="Search members...">
+        </div>
+    </form>
+    {% endif %}
+{% endblock %}
 
 {% block content %}
-<div class="row pt-5 mt-4">
-    <div class="col-12">
-        <h2 class="fw-bold text-dark">💰 Treasurer Dashboard</h2>
-        <p class="text-muted">Financial Overview for **{{ chama.chama_name }}**</p>
-    </div>
-</div>
 
-<div class="row g-4 mt-3">
-    <div class="col-xl-3 col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="icon-circle-lg bg-light-success me-3">
-                        <i class="fas fa-sack-dollar text-success"></i>
-                    </div>
-                    <div>
-                        <div class="text-uppercase text-muted fw-bold small">Total Funds Collected</div>
-                        <h4 class="mb-0 fw-bold text-success">
-                            Ksh. {{ total_funds|floatformat:0|intcomma }}
-                        </h4>
-                    </div>
-                </div>
+
+<!-- ================= TOP FINANCIAL STATS ================= -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-4 col-md-6">
+        <div class="card-base d-flex align-items-center">
+            <div class="icon-circle bg-light text-success me-3">
+                <i class="fas fa-coins"></i>
+            </div>
+            <div>
+                <small class="text-muted fw-bold text-uppercase">Total Collected</small>
+                <h3 class="fw-bold mb-0">Ksh {{ total_funds|intword }}</h3>
             </div>
         </div>
     </div>
 
-    <div class="col-xl-3 col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="icon-circle-lg bg-light-orange me-3">
-                        <i class="fas fa-bullseye text-orange"></i>
-                    </div>
-                    <div>
-                        <div class="text-uppercase text-muted fw-bold small">Target Progress (Ksh. {{ target|floatformat:0|intcomma }})</div>
-                        <h4 class="mb-0 fw-bold text-dark">
-                            {{ progress_percent|floatformat:1 }}%
-                        </h4>
-                    </div>
-                </div>
+    <div class="col-lg-4 col-md-6">
+        <div class="card-base d-flex align-items-center">
+            <div class="icon-circle bg-light text-warning me-3">
+                <i class="fas fa-hand-holding-usd"></i>
+            </div>
+            <div>
+                <small class="text-muted fw-bold text-uppercase">Active Loans</small>
+                <h3 class="fw-bold mb-0">{{ active_loans_count }}</h3>
             </div>
         </div>
     </div>
 
-    <div class="col-xl-3 col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="icon-circle-lg bg-light-warning me-3">
-                        <i class="fas fa-user-clock text-warning"></i>
-                    </div>
-                    <div>
-                        <div class="text-uppercase text-muted fw-bold small">Members Pending / Amount</div>
-                        <h4 class="mb-0 fw-bold text-dark">
-                            {{ pending_count }} / Ksh. {{ pending_amount|floatformat:0|intcomma }}
-                        </h4>
-                    </div>
-                </div>
+    <div class="col-lg-4 col-md-12">
+        <div class="card-base d-flex align-items-center">
+            <div class="icon-circle bg-light text-danger me-3">
+                <i class="fas fa-gavel"></i>
             </div>
-        </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="icon-circle-lg bg-light-info me-3">
-                        <i class="fas fa-hand-holding-usd text-info"></i>
-                    </div>
-                    <div>
-                        <div class="text-uppercase text-muted fw-bold small">Active Loans (Outstanding)</div>
-                        <h4 class="mb-0 fw-bold text-dark">
-                            {{ active_loans_count }} / Ksh. {{ total_outstanding|floatformat:0|intcomma }}
-                        </h4>
-                    </div>
-                </div>
+            <div>
+                <small class="text-muted fw-bold text-uppercase">Total Penalties</small>
+                <h3 class="fw-bold mb-0">Ksh {{ total_penalties|intcomma }}</h3>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row g-4 mt-4">
-    <div class="col-xl-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white fw-bold text-dark border-0">
-                <i class="fas fa-chart-bar me-2"></i> Contribution History (Last 6 Months)
+<!-- ================= ATTENTION ================= -->
+<h6 class="text-muted fw-bold text-uppercase small mb-3">Attention Needed</h6>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-4 col-md-6">
+        <div class="card-base card-attention border-orange">
+            <small class="fw-bold text-warning">
+                <i class="fas fa-clock me-1"></i> PENDING CONTRIBUTIONS
+            </small>
+            <h2 class="fw-bold mt-2 mb-0">{{ pending_count }}</h2>
+            <small class="text-muted">Expected: Ksh {{ pending_amount|intcomma }}</small>
+        </div>
+    </div>
+
+    <div class="col-lg-4 col-md-6">
+        <div class="card-base card-attention border-purple">
+            <small class="fw-bold text-purple">
+                <i class="fas fa-file-invoice-dollar me-1"></i> LOAN REQUESTS
+            </small>
+            <h2 class="fw-bold mt-2 mb-0">{{ pending_loans.count }}</h2>
+            <small class="text-muted">Awaiting approval</small>
+        </div>
+    </div>
+
+    <div class="col-lg-4 col-md-12">
+        <div class="card-base card-attention border-blue">
+            <small class="fw-bold text-primary">
+                <i class="fas fa-exclamation-triangle me-1"></i> DEFAULTS
+            </small>
+            <h2 class="fw-bold mt-2 mb-0">{{ loan_defaults }}</h2>
+            <small class="text-muted">Loan penalties</small>
+        </div>
+    </div>
+</div>
+
+<!-- ================= STK + GOAL ================= -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-4">
+        <div class="card-base card-dark">
+            <div class="d-flex justify-content-between mb-3">
+                <h6 class="fw-bold mb-0">Today’s STK</h6>
+                <i class="fas fa-mobile-alt text-white-muted"></i>
             </div>
-            <div class="card-body">
-                <div class="chart-area" style="height: 300px;">
-                    <canvas id="contributionHistoryChart" class="chart-canvas"
-                            data-type="bar"
-                            data-label="Total Collected (Ksh)"
-                            data-labels='[
-                                {% for entry in contributions_history %}
-                                    "{{ entry.contribution_time__month|date:"M" }}",
-                                {% endfor %}
-                            ]'
-                            data-data='[
-                                {% for entry in contributions_history %}
-                                    {{ entry.total|default:0 }},
-                                {% endfor %}
-                            ]'
-                    ></canvas>
+            <div class="d-flex justify-content-between text-center">
+                <div>
+                    <h4 class="text-success fw-bold mb-0">{{ stk_success }}</h4>
+                    <small class="text-white-muted">Success</small>
+                </div>
+                <div>
+                    <h4 class="text-danger fw-bold mb-0">{{ stk_failed }}</h4>
+                    <small class="text-white-muted">Failed</small>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="col-xl-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white fw-bold text-dark border-0">
-                <i class="fas fa-chart-pie me-2"></i> Cycle Status Breakdown
+    <div class="col-lg-8">
+        <div class="card-base">
+            <div class="d-flex justify-content-between mb-2">
+                <h6 class="fw-bold mb-0">Chama Goal Progress</h6>
+                <span class="badge bg-success">{{ progress_percent|floatformat:0 }}%</span>
             </div>
-            <div class="card-body">
-                <div class="chart-area d-flex justify-content-center" style="height: 300px;">
-                    <canvas id="cycleStatusChart" class="chart-canvas"
-                            data-type="doughnut"
-                            data-label="Cycle Status"
-                            data-labels='["Paid ({{ cycle_status.paid }})", "Pending ({{ cycle_status.pending }})", "Overdue ({{ cycle_status.overdue }})"]'
-                            data-data='[{{ cycle_status.paid|default:0 }}, {{ cycle_status.pending|default:0 }}, {{ cycle_status.overdue|default:0 }}]'
-                            style="max-width: 400px;"
-                    ></canvas>
-                </div>
+            <h4 class="fw-bold">Ksh {{ collected|intword }}</h4>
+            <small class="text-muted">Target: Ksh {{ target|intword }}</small>
+            <div class="progress mt-2" style="height:6px;">
+                <div class="progress-bar bg-success" style="width: {{ progress_percent }}%;"></div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row g-4 mt-4">
-    <div class="col-xl-4 col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="text-uppercase text-muted fw-bold small mb-2">Loan Repayment Progress</div>
-                <h4 class="fw-bold text-info mb-3">{{ repayment_progress|floatformat:1 }}%</h4>
-                <div class="progress" style="height: 10px;">
-                    <div class="progress-bar bg-info" role="progressbar" style="width: {{ repayment_progress|floatformat:0 }}%" aria-valuenow="{{ repayment_progress|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <small class="text-muted mt-2 d-block">
-                    Total Loaned: Ksh. {{ total_loaned|floatformat:0|intcomma }}
-                </small>
+<!-- ================= CHARTS ================= -->
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card-base">
+            <h6 class="fw-bold mb-3">Contribution History</h6>
+            <div style="height:300px;">
+                <canvas id="contributionChart"></canvas>
             </div>
         </div>
     </div>
 
-    <div class="col-xl-4 col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="text-uppercase text-muted fw-bold small mb-2">Penalties Summary</div>
-                <h4 class="fw-bold text-danger mb-0">Ksh. {{ total_penalties|floatformat:0|intcomma }} (Total)</h4>
-                <ul class="list-unstyled mt-2 small">
-                    <li><i class="fas fa-dot-circle text-danger me-1"></i> Missed Contributions: <span class="fw-bold">{{ missed_payments }}</span></li>
-                    <li><i class="fas fa-dot-circle text-danger me-1"></i> Loan Defaults: <span class="fw-bold">{{ loan_defaults }}</span></li>
-                </ul>
-                <a href="{% url 'finance:list_penalties' chama.id %}" class="small text-danger">Manage Penalties <i class="fas fa-arrow-right small"></i></a>
+    <div class="col-lg-4">
+        <div class="card-base">
+            <h6 class="fw-bold mb-3">Cycle Status</h6>
+            {% if cycle_status.paid or cycle_status.pending or cycle_status.overdue %}
+            <div style="height:250px;">
+                <canvas id="cycleChart"></canvas>
             </div>
-        </div>
-    </div>
-
-    <div class="col-xl-4 col-md-12">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="text-uppercase text-muted fw-bold small mb-2">STK Push Monitor (Today)</div>
-                <h4 class="fw-bold mb-0">
-                    <span class="text-success me-3">{{ stk_success }} Success</span>
-                    <span class="text-danger">{{ stk_failed }} Failed</span>
-                </h4>
-                <small class="text-muted mt-2 d-block">
-                    Total transactions today: {{ stk_success|add:stk_failed }}
-                </small>
-                <a href="{% url 'finance:query_transaction_page' %}" class="small text-dark mt-2 d-block">View Transaction Logs <i class="fas fa-arrow-right small"></i></a>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-info-circle fa-2x mb-2"></i>
+                <p>No cycle data available yet.</p>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>
-{% endblock content %}
+
+{% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{{ contributions_history|json_script:"history-data" }}
+{{ cycle_status|json_script:"cycle-data" }} 
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ---------------------------------------------
+    // 1. Contribution History Chart
+    // ---------------------------------------------
+    const historyEl = document.getElementById("history-data");
+    const history = historyEl ? JSON.parse(historyEl.textContent) : [];
+
+    const contributionCtx = document.getElementById("contributionChart");
+    if (contributionCtx) {
+        new Chart(contributionCtx, {
+            type: "line",
+            data: {
+                labels: history.map(h => `Month ${h.contribution_time__month}`),
+                datasets: [{
+                    data: history.map(h => h.total),
+                    borderColor: "#10b981",
+                    backgroundColor: "rgba(16, 185, 129, 0.2)",
+                    borderWidth: 2,
+                    fill: true,
+                    tension: .4
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    // ---------------------------------------------
+    // 2. Cycle Status Chart
+    // ---------------------------------------------
+    // Get the data safely from the JSON script tag
+    const cycleEl = document.getElementById("cycle-data");
+    const cycleData = cycleEl ? JSON.parse(cycleEl.textContent) : {};
+
+    const cycleCtx = document.getElementById("cycleChart");
+    if (cycleCtx) {
+        // Prepare data with fallbacks to 0
+        const paid = cycleData.paid || 0;
+        const pending = cycleData.pending || 0;
+        const overdue = cycleData.overdue || 0;
+
+        new Chart(cycleCtx, {
+            type: "doughnut",
+            data: {
+                labels: ["Paid", "Pending", "Overdue"],
+                datasets: [{
+                    data: [paid, pending, overdue],
+                    backgroundColor: ["#10b981", "#f59e0b", "#ef4444"],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                cutout: "70%",
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: "bottom",
+                        labels: { color: "#6b7280", font: { size: 12 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const value = ctx.parsed;
+                                const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                                return `${ctx.label}: ${value} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}
